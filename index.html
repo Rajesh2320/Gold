@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root { --gold: #c5a028; --dark: #121212; --light: #f8f9fa; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--light); color: var(--dark); margin:0; padding:20px; }
+    .container { max-width: 750px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    h1, h2 { border-bottom: 2px solid var(--gold); padding-bottom: 8px; font-weight: 700; }
+    .status-banner { padding: 14px; border-radius: 8px; text-align: center; font-weight: 700; margin-bottom: 22px; transition: 0.3s; }
+    .status-OPEN { background: #e6f4ea; color: #137333; }
+    .status-CLOSED { background: #fce8e6; color: #c5221f; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+    input, select, textarea { width: 100%; padding: 11px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+    button { background: var(--gold); color: white; border: none; padding: 14px; font-weight: 700; border-radius: 8px; cursor: pointer; width: 100%; font-size: 16px; }
+    button:hover { background: #aa871e; }
+    .nav-tabs { display: flex; margin-bottom: 20px; background: #f1f3f4; border-radius: 8px; padding: 4px; }
+    .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-weight: 600; border-radius: 6px; font-size: 14px; }
+    .tab.active { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .admin-panel, .customer-panel { display: none; }
+    .active-panel { display: block; }
+    .delivery-fields { display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px dashed #dadce0; margin-bottom: 16px; }
+    
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; }
+    .modal-box { background:white; padding:30px; border-radius:12px; max-width:400px; width:90%; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.2); }
+    .qr-container { background:#f8f9fa; padding:15px; border-radius:8px; margin:15px 0; display:inline-block; }
+    .qr-img { width: 220px; height: 220px; display:block; margin:0 auto; }
+    .price-tag { font-size:24px; font-weight:800; color: #137333; margin: 10px 0; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="nav-tabs">
+    <div id="tab-cust" class="tab active" onclick="switchTab('customer')">Customer Checkout</div>
+    <div id="tab-admin" class="tab" onclick="switchTab('admin')">Admin Hub</div>
+  </div>
+
+  <div id="statusBanner" class="status-banner status-CLOSED">Syncing system channels...</div>
+
+  <div id="customerPanel" class="customer-panel active-panel">
+    <h2>Secure Online Gold Booking</h2>
+    <form id="orderForm" onsubmit="handleOrderSubmit(event)">
+      <div class="form-group">
+        <label>Customer Full Name</label>
+        <input type="text" id="custName" required placeholder="Name">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <div class="form-group" style="flex:1;">
+          <label>Email Address</label>
+          <input type="email" id="custEmail" required placeholder="name@domain.com">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>WhatsApp / Mobile Number</label>
+          <input type="tel" id="custPhone" required placeholder="9894XXXXXX">
+        </div>
+      </div>
+      
+      <div style="display:flex; gap:10px;">
+        <div class="form-group" style="flex:2;">
+          <label>Biscuit Denomination</label>
+          <select id="itemWeight" onchange="updateEstimatedPrice()">
+            <option value="250">250 Grams (₹500)</option>
+            <option value="500">500 Grams (₹1000)</option>
+            <option value="1000">1 Kilogram (₹2000)</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>Quantity</label>
+          <input type="number" id="orderQty" min="1" max="20" value="1" onchange="updateEstimatedPrice()">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Fulfillment Preference</label>
+        <select id="deliveryMethod" onchange="toggleDeliveryOptions()">
+          <option value="Self Pick-up">Self Pick-up (Office at PIN 600016)</option>
+          <option value="Courier Delivery">Courier Delivery (Limited to 30km radius)</option>
+        </select>
+      </div>
+
+      <div id="deliveryFieldsBlock" class="delivery-fields">
+        <div class="form-group">
+          <label>Delivery Address</label>
+          <textarea id="deliveryAddress" rows="2" placeholder="Door No, Street Name, Locality, Chennai"></textarea>
+        </div>
+        <div class="form-group">
+          <label>6-Digit PIN Code</label>
+          <input type="number" id="pinCode" placeholder="600016" max="999999">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <p style="font-weight:700; font-size:16px;">Estimated Value: <span id="estPrice" style="color:#137333;">₹500</span></p>
+      </div>
+      
+      <div class="form-group">
+        <label>Bank UPI Transaction Reference ID (Fill post payment)</label>
+        <input type="text" id="payRef" required placeholder="UTR / Txn Ref Number">
+      </div>
+
+      <div class="form-group">
+        <label>Upload Payment Proof / Screenshot (JPG/PNG/PDF)</label>
+        <input type="file" id="paymentProofFile" accept="image/*,.pdf" required>
+      </div>
+
+      <button type="submit" id="submitBtn">Generate & Confirm Order</button>
+    </form>
+  </div>
+
+  <div id="adminPanel" class="admin-panel">
+    <h2>Admin Authentication</h2>
+    <div id="adminAuthSection">
+      <div class="form-group">
+        <label>Enter Cryptographic Access Password</label>
+        <input type="password" id="adminPass" required>
+      </div>
+      <button onclick="loadAdminDashboard()">Validate & Unlock System</button>
+    </div>
+
+    <div id="adminDashboard" style="display:none; margin-top:20px;">
+      <h3>Force Stop Control Actions</h3>
+      <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <button onclick="changeSystemStatus('ACTIVE')" style="background:#28a745;">Unlock App Portals</button>
+        <button onclick="changeSystemStatus('INACTIVE')" style="background:#dc3545;">Lock Ordering System</button>
+      </div>
+      <p>Current Quota Weight Booked: <span id="adminTotalKg" style="font-weight:700;">0</span> / <span id="adminMaxLimit">9</span> kg</p>
+    </div>
+  </div>
+</div>
+
+<div id="paymentModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 style="margin-top:0;">Scan UPI QR Code to Pay</h3>
+    <p>Please open any UPI app (GPay, PhonePe, Paytm) to clear dues securely.</p>
+    <div class="price-tag" id="modalPrice">₹0</div>
+    <div class="qr-container">
+      <img src="" id="upiQrCode" class="qr-img" alt="UPI Payment QR Code">
+    </div>
+    <p style="font-size:12px; color:#5f6368;">Receiving Merchant ID: <strong>9884908910@hdfc</strong></p>
+    <button onclick="closePaymentModal()" style="background:var(--dark);">I Have Transferred the Funds</button>
+  </div>
+</div>
+
+<script>
+  /***********************************************************************************
+   * 🚨🚨🚨 PASTE YOUR NEW GOOGLE DEPLOYMENT LINK IN THE QUOTES BELOW 🚨🚨🚨
+   ***********************************************************************************/
+  const API_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+  /***********************************************************************************
+   * 🌟🌟🌟 CONFIGURATION LAYER COMPLETED ABOVE 🌟🌟🌟
+   ***********************************************************************************/
+
+  window.onload = function() { checkGlobalStatus(); setInterval(checkGlobalStatus, 25000); };
+
+  function switchTab(t) {
+    document.getElementById('tab-cust').classList.toggle('active', t==='customer');
+    document.getElementById('tab-admin').classList.toggle('active', t==='admin');
+    document.getElementById('customerPanel').classList.toggle('active-panel', t==='customer');
+    document.getElementById('adminPanel').classList.toggle('active-panel', t==='admin');
+  }
+
+  function toggleDeliveryOptions() {
+    var method = document.getElementById("deliveryMethod").value;
+    var block = document.getElementById("deliveryFieldsBlock");
+    var addrInput = document.getElementById("deliveryAddress");
+    var pinInput = document.getElementById("pinCode");
+    if (method === "Courier Delivery") {
+      block.style.display = "block";
+      addrInput.required = true; pinInput.required = true;
+    } else {
+      block.style.display = "none";
+      addrInput.required = false; pinInput.required = false;
+    }
+  }
+
+  function updateEstimatedPrice() {
+    var w = parseInt(document.getElementById("itemWeight").value);
+    var q = parseInt(document.getElementById("orderQty").value) || 1;
+    var unit = w === 250 ? 500 : (w === 500 ? 1000 : 2000);
+    document.getElementById("estPrice").innerText = "₹" + (unit * q);
+  }
+
+  async function checkGlobalStatus() {
+    try {
+      let response = await fetch(API_URL + "?action=getAppStatus", {
+        method: "GET",
+        mode: "cors",
+        headers: { "Accept": "application/json" }
+      });
+      let res = await response.json();
+      var b = document.getElementById("statusBanner");
+      b.className = "status-banner status-" + res.status;
+      if(res.status === "OPEN") {
+        b.innerHTML = "🟢 System Active | Quota Filled: " + res.currentTotalKg.toFixed(2) + " / " + res.limitKg + " kg";
+        document.getElementById("submitBtn").disabled = false;
+      } else {
+        var r = res.reason === "LIMIT_EXCEEDED" ? "Daily 9kg Booking Limit Reached." : "Closed manually by Admin.";
+        b.innerHTML = "🔴 System Paused | " + r;
+        document.getElementById("submitBtn").disabled = true;
+      }
+    } catch(e) { console.error("Sync error:", e); }
+  }
+
+  function handleOrderSubmit(e) {
+    e.preventDefault();
+    document.getElementById("submitBtn").disabled = true;
+    document.getElementById("statusBanner").innerHTML = "⏳ Processing fields & encoding file... please wait.";
+    
+    var n = document.getElementById("custName").value;
+    var em = document.getElementById("custEmail").value;
+    var ph = document.getElementById("custPhone").value;
+    var w = document.getElementById("itemWeight").value;
+    var q = document.getElementById("orderQty").value;
+    var p = document.getElementById("payRef").value;
+    var dm = document.getElementById("deliveryMethod").value;
+    var addr = document.getElementById("deliveryAddress").value;
+    var pin = document.getElementById("pinCode").value;
+    var fileInput = document.getElementById("paymentProofFile");
+    
+    if (fileInput.files.length === 0) {
+      alert("Please upload your payment verification receipt screenshot first.");
+      document.getElementById("submitBtn").disabled = false;
+      return;
+    }
+    
+    var file = fileInput.files[0];
+    var reader = new FileReader();
+    reader.onload = async function(evt) {
+      var fileData = evt.target.result;
+      var fileName = file.name;
+      
+      try {
+        let response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "submitOrder", customerName: n, customerEmail: em, customerPhone: ph,
+            weightGrams: w, quantity: q, paymentRef: p, deliveryMethod: dm,
+            address: addr, pinCode: pin, fileData: fileData, fileName: fileName
+          })
+        });
+        let res = await response.json();
+        document.getElementById("submitBtn").disabled = false;
+        if(res.success) {
+          openPaymentModal(res.amount, res.orderId);
+          document.getElementById("orderForm").reset();
+          toggleDeliveryOptions();
+          updateEstimatedPrice();
+        } else {
+          alert("Transaction Refused: " + res.error);
+        }
+        checkGlobalStatus();
+      } catch(err) { alert("Network error: " + err); document.getElementById("submitBtn").disabled = false; }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function openPaymentModal(amt, orderId) {
+    document.getElementById("modalPrice").innerText = "₹" + amt;
+    var upiString = "upi://pay?pa=9884908910@hdfc&pn=Gold%20Bullion%20Store&am=" + amt + "&cu=INR&tn=Order_" + orderId;
+    var qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(upiString);
+    document.getElementById("upiQrCode").src = qrApiUrl;
+    document.getElementById("paymentModal").style.display = "flex";
+  }
+
+  function closePaymentModal() { document.getElementById("paymentModal").style.display = "none"; }
+
+  async function loadAdminDashboard() {
+    var pass = document.getElementById("adminPass").value;
+    try {
+      let response = await fetch(API_URL + "?action=getAppStatus", { method: "GET", mode: "cors" });
+      let statusRes = await response.json();
+      document.getElementById("adminAuthSection").style.display = "none";
+      document.getElementById("adminDashboard").style.display = "block";
+      document.getElementById("adminTotalKg").innerText = statusRes.currentTotalKg.toFixed(2);
+      document.getElementById("adminMaxLimit").innerText = statusRes.limitKg;
+    } catch(e) { alert("Authentication connection dropped."); }
+  }
+
+  async function changeSystemStatus(stateValue) {
+    var pass = document.getElementById("adminPass").value;
+    try {
+      let response = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "toggleAppStatus", password: pass, stateValue: stateValue })
+      });
+      let res = await response.json();
+      if(res.success) { alert("App state changed to: " + stateValue); checkGlobalStatus(); } else { alert(res.error); }
+    } catch(e) { alert("Error changing status"); }
+  }
+</script>
+</body>
+</html>
