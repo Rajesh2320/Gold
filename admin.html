@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Gold Orders</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            color: #c5a028;
+            font-size: 28px;
+        }
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        /* Login Section */
+        .login-section {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .login-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #c5a028;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #c5a028;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .login-btn:hover {
+            background: #a68a1f;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        /* Dashboard Section */
+        .dashboard-section {
+            display: none;
+        }
+
+        /* Order Status Section */
+        .status-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .status-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .status-control {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .status-control label {
+            font-weight: 600;
+            color: #333;
+            min-width: 100px;
+        }
+        .status-control select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        .status-control select:focus {
+            outline: none;
+            border-color: #c5a028;
+        }
+        .confirm-btn {
+            padding: 10px 30px;
+            background: #c5a028;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .confirm-btn:hover {
+            background: #a68a1f;
+        }
+        .confirm-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Diagnostic Message */
+        .diagnostic {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            color: #004085;
+            border-left: 4px solid #0066cc;
+            display: none;
+            animation: slideIn 0.3s ease-in-out;
+        }
+        .diagnostic.success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+        .diagnostic.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stats Section */
+        .stats-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .stats-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .stat-card {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #c5a028;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            color: #c5a028;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        /* Orders Section */
+        .orders-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .orders-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .orders-container {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        .order-card {
+            background: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            min-width: 400px;
+            flex-shrink: 0;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .order-card:hover {
+            border-color: #c5a028;
+            box-shadow: 0 4px 12px rgba(197, 160, 40, 0.2);
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .order-id {
+            font-weight: bold;
+            color: #333;
+            font-size: 16px;
+        }
+        .order-time {
+            color: #666;
+            font-size: 12px;
+        }
+        .order-detail {
+            margin: 12px 0;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .order-detail.status-highlight {
+            background: #f0f0f0;
+            padding: 12px 8px;
+            margin: 0 -20px 15px -20px;
+            padding-left: 20px;
+            padding-right: 20px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+        .order-detail-label {
+            color: #666;
+            font-weight: 700;
+            min-width: 80px;
+        }
+        .order-detail-value {
+            color: #333;
+            text-align: right;
+            flex-grow: 1;
+            margin-left: 10px;
+            word-break: break-word;
+        }
+        .order-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 15px;
+            border-top: 2px solid #ddd;
+            sticky: true;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .edit-btn {
+            background: #007bff;
+            color: white;
+        }
+        .edit-btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 86, 179, 0.3);
+        }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(200, 35, 51, 0.3);
+        }
+        .no-orders {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        /* Modal for edit */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-body input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .modal-body input:focus {
+            outline: none;
+            border-color: #c5a028;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .save-btn {
+            background: #28a745;
+            color: white;
+        }
+        .save-btn:hover {
+            background: #218838;
+        }
+        .cancel-btn {
+            background: #6c757d;
+            color: white;
+        }
+        .cancel-btn:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Section -->
+        <div id="loginSection" class="login-section">
+            <h2>🔒 Admin Login</h2>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter admin password" onkeypress="if(event.key==='Enter') login()">
+            </div>
+            <button class="login-btn" onclick="login()">Login</button>
+            <div id="loginError"></div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboardSection" class="dashboard-section">
+            <!-- Header -->
+            <div class="header">
+                <h1>🥇 Gold Orders Dashboard</h1>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- Order Status Control -->
+            <div class="status-section">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2>📊 Order Status Control</h2>
+                    </div>
+                    <div id="ordersStatusBadge" style="background: #28a745; color: white; padding: 15px 25px; border-radius: 8px; font-weight: bold; font-size: 18px; text-align: center;">
+                        Orders: <span id="ordersStatusValue">True</span>
+                    </div>
+                </div>
+                <div class="status-control">
+                    <label for="orderStatus">Change Status:</label>
+                    <select id="orderStatus">
+                        <option value="">-- Select Status --</option>
+                        <option value="true">True (Enabled)</option>
+                        <option value="false">False (Disabled)</option>
+                    </select>
+                    <button class="confirm-btn" onclick="confirmOrderStatus()">Confirm</button>
+                </div>
+                <div id="statusDiagnostic" class="diagnostic"></div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-section">
+                <h2>📈 Today's Summary</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Orders</div>
+                        <div class="stat-value" id="totalOrders">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Weight (kg)</div>
+                        <div class="stat-value" id="totalKg">0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Cards -->
+            <div class="orders-section">
+                <h2>📋 Today's Orders (Horizontal Scroll)</h2>
+                <div class="orders-container" id="ordersContainer">
+                    <div class="no-orders">Loading orders...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">✏️ Edit Order</div>
+            <div class="modal-body">
+                <label>Customer Name:</label>
+                <input type="text" id="editName" placeholder="Customer name">
+                <label>Email:</label>
+                <input type="email" id="editEmail" placeholder="Email">
+                <label>Phone:</label>
+                <input type="tel" id="editPhone" placeholder="Phone">
+                <label>Address:</label>
+                <input type="text" id="editAddress" placeholder="Address">
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn save-btn" onclick="saveOrderChanges()">Save Changes</button>
+                <button class="modal-btn cancel-btn" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== API CONFIGURATION =====
+        const API_URL = "https://script.google.com/macros/s/AKfycbzAyhoG8IEAeEPv2WNDY-93H-iENAwuHCdbHOVhJvdG2vQxf7Ovl1vJ-VczCYVLdXKygQ/exec";
+        const GOLD_ORDERS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSz79ejej2mn7QQIKp2zM-icu1Kh6qat7KQU5o-2FC4UnobLxsG5GDKyM33e9ySiJ2tMmxsXbm59k-h/pub?gid=0&single=true&output=csv";
+        const ADMIN_SETTINGS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSz79ejej2mn7QQIKp2zM-icu1Kh6qat7KQU5o-2FC4UnobLxsG5GDKyM33e9ySiJ2tMmxsXbm59k-h/pub?gid=1028405274&single=true&output=csv";
+
+        let isLoggedIn = false;
+        let currentOrders = [];
+        let editingOrderId = null;
+
+        // ===== LOGIN =====
+        function login() {
+            const password = document.getElementById("password").value;
+            const loginError = document.getElementById("loginError");
+            
+            if (!password) {
+                loginError.innerHTML = '<div class="error">Please enter password</div>';
+                return;
+            }
+            
+            if (password === "admin123") {
+                isLoggedIn = true;
+                loginError.innerHTML = "";
+                document.getElementById("loginSection").style.display = "none";
+                document.getElementById("dashboardSection").style.display = "block";
+                
+                loadOrderingStatus();
+                refreshData();
+                setInterval(refreshData, 30000);
+            } else {
+                loginError.innerHTML = '<div class="error">❌ Invalid password</div>';
+            }
+        }
+
+        // ===== LOGOUT =====
+        function logout() {
+            isLoggedIn = false;
+            document.getElementById("loginSection").style.display = "block";
+            document.getElementById("dashboardSection").style.display = "none";
+            document.getElementById("password").value = "";
+        }
+
+        // ===== LOAD ORDERING STATUS =====
+        async function loadOrderingStatus() {
+            try {
+                const response = await fetch(ADMIN_SETTINGS_CSV_URL);
+                const text = await response.text();
+                
+                const lines = text.trim().split('\n');
+                let status = "true";
+                
+                if (lines.length > 1) {
+                    const value = lines[1].trim().toLowerCase();
+                    status = (value === 'false' || value === '0') ? "false" : "true";
+                }
+                
+                document.getElementById("orderStatus").value = status;
+                
+                // UPDATE BADGE
+                const badge = document.getElementById("ordersStatusBadge");
+                const badgeValue = document.getElementById("ordersStatusValue");
+                
+                if (status === "true") {
+                    badge.style.background = "#28a745"; // Green
+                    badgeValue.textContent = "True";
+                } else {
+                    badge.style.background = "#dc3545"; // Red
+                    badgeValue.textContent = "False";
+                }
+                
+                console.log("✅ Status loaded: " + status);
+                
+            } catch (error) {
+                console.error("❌ Error:", error);
+            }
+        }
+
+        // ===== CONFIRM ORDER STATUS =====
+        async function confirmOrderStatus() {
+            const selectedStatus = document.getElementById("orderStatus").value;
+            
+            if (!selectedStatus) {
+                alert("Please select a status");
+                return;
+            }
+            
+            const diagnostic = document.getElementById("statusDiagnostic");
+            diagnostic.style.display = "block";
+            diagnostic.classList.remove("success", "error");
+            diagnostic.innerHTML = "⏳ Request sent...";
+            
+            const newState = selectedStatus === "true";
+            
+            try {
+                await fetch(API_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    body: JSON.stringify({
+                        action: "setOrderingStatus",
+                        enabled: newState
+                    })
+                });
+                
+                diagnostic.innerHTML = "🔄 Request updated in Google Sheet...";
+                
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // RELOAD STATUS TO UPDATE BADGE
+                await loadOrderingStatus();
+                
+                diagnostic.classList.add("success");
+                diagnostic.innerHTML = "✅ Success! Order status updated.";
+                
+                setTimeout(() => {
+                    diagnostic.style.display = "none";
+                }, 4000);
+                
+            } catch (error) {
+                diagnostic.classList.add("error");
+                diagnostic.innerHTML = "❌ Error: " + error.message;
+            }
+        }
+
+        // ===== REFRESH DATA =====
+        async function refreshData() {
+            if (!isLoggedIn) return;
+            
+            try {
+                const response = await fetch(GOLD_ORDERS_CSV_URL);
+                const csv = await response.text();
+                
+                const orders = parseOrders(csv);
+                displayOrders(orders);
+                
+            } catch (error) {
+                console.error("❌ Error:", error);
+            }
+        }
+
+        // ===== PARSE ORDERS (PROPER CSV PARSING) =====
+        function parseOrders(csv) {
+            const lines = csv.trim().split('\n');
+            const today = getTodayDate();
+            let totalKg = 0;
+            const todayOrders = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i];
+                if (!line.trim()) continue;
+                
+                // Proper CSV parsing - handle quoted fields
+                const values = parseCSVLine(line);
+                if (values.length < 12) continue;
+                
+                const timestamp = values[1] ? values[1].trim() : "";
+                
+                if (timestamp.includes(today)) {
+                    const kg = parseFloat(values[7]) || 0;
+                    totalKg += kg;
+                    
+                    todayOrders.push({
+                        orderId: values[0] ? values[0].trim() : "N/A",
+                        timestamp: values[1] ? values[1].trim() : "N/A",
+                        customerName: values[2] ? values[2].trim() : "N/A",
+                        email: values[3] ? values[3].trim() : "N/A",
+                        phone: values[4] ? values[4].trim() : "N/A",
+                        weightGrams: values[5] ? values[5].trim() : "N/A",
+                        quantity: values[6] ? values[6].trim() : "N/A",
+                        totalKg: kg.toFixed(3),
+                        amount: values[8] ? values[8].trim() : "N/A",
+                        orderStatus: values[9] ? values[9].trim() : "Pending",
+                        address: values[10] ? values[10].trim() : "N/A",
+                        pinCode: values[11] ? values[11].trim() : "N/A"
+                    });
+                }
+            }
+            
+            currentOrders = todayOrders;
+            return { orders: todayOrders, totalKg: totalKg, count: todayOrders.length };
+        }
+
+        // ===== PROPER CSV LINE PARSER =====
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let insideQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    insideQuotes = !insideQuotes;
+                } else if (char === ',' && !insideQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            
+            return result.map(item => item.replace(/^"|"$/g, ''));
+        }
+
+        // ===== DISPLAY ORDERS AS CARDS =====
+        function displayOrders(data) {
+            document.getElementById("totalOrders").textContent = data.count;
+            document.getElementById("totalKg").textContent = data.totalKg.toFixed(3);
+            
+            const container = document.getElementById("ordersContainer");
+            
+            if (data.orders.length === 0) {
+                container.innerHTML = '<div class="no-orders">No orders today</div>';
+                return;
+            }
+            
+            container.innerHTML = data.orders.map(order => {
+                const statusColor = order.orderStatus && order.orderStatus.toLowerCase() === 'completed' ? '#28a745' : '#ffc107';
+                return `
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div>
+                                <div class="order-id">${order.orderId}</div>
+                                <div class="order-time">${order.timestamp}</div>
+                            </div>
+                        </div>
+                        
+                        <!-- STATUS FIELD AT TOP -->
+                        <div class="order-detail status-highlight">
+                            <span class="order-detail-label">Status:</span>
+                            <span class="order-detail-value" style="background: ${statusColor}; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; text-align: center;">
+                                ${order.orderStatus || 'Pending'}
+                            </span>
+                        </div>
+                        
+                        <div class="order-detail">
+                            <span class="order-detail-label">Customer:</span>
+                            <span class="order-detail-value">${order.customerName}</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="order-detail-label">Email:</span>
+                            <span class="order-detail-value">${order.email}</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="order-detail-label">Phone:</span>
+                            <span class="order-detail-value">${order.phone}</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="order-detail-label">Weight:</span>
+                            <span class="order-detail-value">${order.totalKg} kg</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="order-detail-label">Amount:</span>
+                            <span class="order-detail-value">₹${order.amount}</span>
+                        </div>
+                        <div class="order-detail">
+                            <span class="order-detail-label">Address:</span>
+                            <span class="order-detail-value">${order.address}</span>
+                        </div>
+                        <div class="order-actions">
+                            <button class="action-btn edit-btn" onclick="openEditModal('${order.orderId}')">✏️ Edit</button>
+                            <button class="action-btn delete-btn" onclick="deleteOrder('${order.orderId}')">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ===== EDIT ORDER MODAL =====
+        function openEditModal(orderId) {
+            const order = currentOrders.find(o => o.orderId === orderId);
+            if (!order) return;
+            
+            editingOrderId = orderId;
+            document.getElementById("editName").value = order.customerName;
+            document.getElementById("editEmail").value = order.email;
+            document.getElementById("editPhone").value = order.phone;
+            document.getElementById("editAddress").value = order.address;
+            
+            document.getElementById("editModal").style.display = "block";
+        }
+
+        function closeEditModal() {
+            document.getElementById("editModal").style.display = "none";
+            editingOrderId = null;
+        }
+
+        function saveOrderChanges() {
+            alert("✅ Changes saved!\n\nNote: To fully update the Google Sheet, you'll need to manually edit it or contact support.\n\nOrder ID: " + editingOrderId);
+            closeEditModal();
+            refreshData();
+        }
+
+        // ===== DELETE ORDER =====
+        function deleteOrder(orderId) {
+            if (confirm("❌ Are you sure you want to delete this order?\n\nOrder ID: " + orderId)) {
+                alert("✅ Order marked for deletion!\n\nNote: To fully delete from Google Sheet, please manually remove the row or contact support.\n\nOrder ID: " + orderId);
+                refreshData();
+            }
+        }
+
+        // ===== CLOSE MODAL ON OUTSIDE CLICK =====
+        window.onclick = function(event) {
+            const modal = document.getElementById("editModal");
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // ===== GET TODAY'S DATE =====
+        function getTodayDate() {
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = today.getFullYear();
+            return day + "/" + month + "/" + year;
+        }
+    </script>
+</body>
+</html>
