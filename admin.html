@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Gold Ordering</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: #c5a028; margin-bottom: 20px; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .stat { font-size: 48px; font-weight: bold; color: #c5a028; margin: 20px 0; }
+        .status-active { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #28a745; }
+        .status-inactive { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #dc3545; }
+        .toggle-btn { padding: 15px 40px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin: 10px; transition: all 0.3s; }
+        .toggle-on { background: #27ae60; color: white; }
+        .toggle-on:hover { background: #229954; }
+        .toggle-off { background: #e74c3c; color: white; }
+        .toggle-off:hover { background: #c0392b; }
+        .orders-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 20px; }
+        .orders-table th { background: #c5a028; color: white; padding: 15px; text-align: left; font-size: 13px; font-weight: 600; }
+        .orders-table td { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .orders-table tbody tr:hover { background: #f9f9f9; }
+        .login-box { max-width: 400px; margin: 50px auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+        .login-box h1 { margin-bottom: 30px; }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; }
+        .login-box button { width: 100%; padding: 12px; background: #c5a028; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; margin-top: 20px; font-size: 16px; transition: all 0.3s; }
+        .login-box button:hover { background: #a68a1f; }
+        .password-protected { display: none; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .refresh-btn { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; font-weight: 600; transition: all 0.3s; }
+        .refresh-btn:hover { background: #2980b9; }
+        .logout-btn { padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; float: right; transition: all 0.3s; }
+        .logout-btn:hover { background: #7f8c8d; }
+        .loading { text-align: center; padding: 30px; color: #666; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #c5a028; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .progress-bar { width: 100%; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 15px 0; }
+        .progress-fill { height: 100%; background: #27ae60; width: 0%; transition: width 0.3s; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .input-group { display: flex; gap: 10px; margin: 20px 0; }
+        .input-group input { flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 5px; }
+        .input-group button { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; }
+        .input-group button:hover { background: #2980b9; }
+        .no-data { text-align: center; padding: 50px 20px; color: #999; }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN SECTION -->
+<div id="loginSection" class="login-box">
+    <h1 style="color: #c5a028;">🔐 Admin Login</h1>
+    <p style="color: #666; margin-bottom: 20px;">Enter admin password</p>
+    <input type="password" id="adminPassword" placeholder="Enter password" onkeypress="if(event.key==='Enter') login()">
+    <button onclick="login()">🔓 Login</button>
+    <div id="loginError"></div>
+</div>
+
+<!-- DASHBOARD SECTION -->
+<div id="dashboardSection" class="password-protected">
+    <div class="container">
+        <div class="header">
+            <h1>📊 Admin Dashboard - Gold Orders</h1>
+            <button onclick="logout()" class="logout-btn">🔐 Logout</button>
+        </div>
+        
+        <!-- SHEET ID SETUP (if not configured) -->
+        <div id="setupSection" style="display: none;">
+            <div class="card">
+                <h2>⚙️ Setup Required</h2>
+                <p style="margin: 15px 0; color: #666;">
+                    First time setup: Enter your Google Sheet ID
+                </p>
+                <div class="input-group">
+                    <input type="text" id="sheetId" placeholder="Enter your Google Sheet ID" style="flex: 1;">
+                    <button onclick="saveSheetId()">Save Sheet ID</button>
+                </div>
+                <p style="margin-top: 15px; font-size: 12px; color: #999;">
+                    📌 Find Sheet ID in URL: https://docs.google.com/spreadsheets/d/<strong>YOUR_SHEET_ID</strong>/edit
+                </p>
+            </div>
+        </div>
+        
+        <!-- STATS CARDS -->
+        <div class="dashboard">
+            <!-- Today's Usage -->
+            <div class="card">
+                <h2>📈 Today's Usage</h2>
+                <div class="stat" id="todaysTotal">-</div>
+                <p style="color: #666; font-size: 16px;">Daily Limit: <strong>9.00 kg</strong></p>
+                <p style="color: #27ae60; font-size: 16px; margin-top: 10px;">
+                    Remaining: <strong id="remaining">-</strong>
+                </p>
+                <div style="margin-top: 20px; background: #f0f0f0; height: 20px; border-radius: 10px; overflow: hidden;">
+                    <div id="usageBar" style="background: #27ae60; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+                <p style="text-align: center; color: #666; margin-top: 10px; font-size: 12px;">
+                    <span id="usagePercent">-</span>% utilized
+                </p>
+                <p style="text-align: center; color: #999; margin-top: 15px; font-size: 11px;">
+                    Last updated: <span id="lastUpdate">-</span>
+                </p>
+            </div>
+            
+            <!-- Ordering Status -->
+            <div class="card">
+                <h2>🛒 Ordering Status</h2>
+                <div id="orderingStatus">Loading...</div>
+                
+                <div style="text-align: center; padding: 20px; background: #f9f9f9; border-radius: 10px; margin-top: 20px;">
+                    <p style="margin-bottom: 20px; color: #666;">Toggle ordering:</p>
+                    <button class="toggle-btn toggle-on" id="enableBtn" onclick="enableOrdering()" style="display:none;">✅ Enable Ordering</button>
+                    <button class="toggle-btn toggle-off" id="disableBtn" onclick="disableOrdering()" style="display:none;">❌ Disable Ordering</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- REFRESH BUTTON -->
+        <div style="margin-bottom: 20px;">
+            <button class="refresh-btn" onclick="refreshData()">🔄 Refresh Data Now</button>
+            <span style="margin-left: 20px; color: #999; font-size: 12px;">Auto-refreshes every 30 seconds</span>
+        </div>
+        
+        <!-- ORDERS TABLE -->
+        <div class="card">
+            <h2>📋 Today's Orders (<span id="orderCount">-</span>)</h2>
+            <div style="overflow-x: auto;">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Time</th>
+                            <th>Customer</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Weight (g)</th>
+                            <th>Qty</th>
+                            <th>Total (kg)</th>
+                            <th>Amount (₹)</th>
+                            <th>Address</th>
+                            <th>PIN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersBody">
+                        <tr><td colspan="11" class="loading"><div class="spinner"></div> Loading orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- SETTINGS -->
+        <div class="card">
+            <h2>⚙️ Settings</h2>
+            <div class="input-group">
+                <input type="number" id="dailyLimit" placeholder="Daily limit in kg" value="9">
+                <button onclick="updateDailyLimit()">Update Limit</button>
+            </div>
+            <p style="color: #666; font-size: 14px;">Change the daily gold limit (default: 9kg)</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+    const API_KEY = 'AIzaSyAXZ3Ym7gVkFo0pqWe1w5Z2K8L3M4N5O6P'; // Public key for read-only access
+    
+    let isLoggedIn = false;
+    let sheetId = localStorage.getItem('goldSheetId');
+    let orderingEnabled = true;
+    let allOrders = [];
+    let currentDate = getTodayDateString();
+    
+    // ===== GET TODAY'S DATE STRING =====
+    function getTodayDateString() {
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = today.getFullYear();
+        return day + "/" + month + "/" + year;
+    }
+    
+    // ===== LOGIN =====
+    function login() {
+        const password = document.getElementById("adminPassword").value;
+        const loginError = document.getElementById("loginError");
+        
+        if (!password) {
+            loginError.innerHTML = '<div class="error">❌ Please enter password</div>';
+            return;
+        }
+        
+        // Check password
+        if (password === "admin123") {
+            isLoggedIn = true;
+            loginError.innerHTML = "";
+            document.getElementById("loginSection").style.display = "none";
+            document.getElementById("dashboardSection").classList.remove("password-protected");
+            
+            // Check if sheet ID is configured
+            if (!sheetId) {
+                document.getElementById("setupSection").style.display = "block";
+            } else {
+                document.getElementById("setupSection").style.display = "none";
+                refreshData();
+                // Auto-refresh every 30 seconds
+                setInterval(refreshData, 30000);
+            }
+        } else {
+            loginError.innerHTML = '<div class="error">❌ Invalid password</div>';
+        }
+    }
+    
+    // ===== SAVE SHEET ID =====
+    function saveSheetId() {
+        const id = document.getElementById("sheetId").value.trim();
+        
+        if (!id) {
+            alert("❌ Please enter Sheet ID");
+            return;
+        }
+        
+        localStorage.setItem('goldSheetId', id);
+        sheetId = id;
+        document.getElementById("setupSection").style.display = "none";
+        
+        // Load data
+        refreshData();
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+        
+        alert("✅ Sheet ID saved! Loading data...");
+    }
+    
+    // ===== LOGOUT =====
+    function logout() {
+        isLoggedIn = false;
+        document.getElementById("loginSection").style.display = "block";
+        document.getElementById("dashboardSection").classList.add("password-protected");
+        document.getElementById("adminPassword").value = "";
+    }
+    
+    // ===== REFRESH DATA FROM SHEET =====
+    async function refreshData() {
+        if (!isLoggedIn || !sheetId) return;
+        
+        console.log("📊 Refreshing data from Google Sheet...");
+        
+        try {
+            // Fetch data from Google Sheet using Sheets API
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Gold Orders?key=${API_KEY}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            console.log("✅ Data received from sheet:", data);
+            
+            if (!data.values) {
+                console.error("❌ No data found in sheet");
+                return;
+            }
+            
+            // Parse sheet data
+            const rows = data.values;
+            const headers = rows[0];
+            
+            // Find column indices
+            const colIndex = {
+                orderId: 0,
+                timestamp: 1,
+                customerName: 2,
+                email: 3,
+                phone: 4,
+                weightGrams: 5,
+                quantity: 6,
+                totalKg: 7,
+                amount: 8,
+                status: 9,
+                address: 10,
+                pinCode: 11
+            };
+            
+            // Process orders
+            let totalKg = 0;
+            let todayOrders = [];
+            
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const timestamp = row[colIndex.timestamp] ? row[colIndex.timestamp].toString() : "";
+                
+                // Check if order is from today
+                if (timestamp.includes(currentDate)) {
+                    const kg = parseFloat(row[colIndex.totalKg]) || 0;
+                    totalKg += kg;
+                    
+                    todayOrders.push({
+                        orderId: row[colIndex.orderId] || "N/A",
+                        timestamp: row[colIndex.timestamp] || "N/A",
+                        customerName: row[colIndex.customerName] || "N/A",
+                        email: row[colIndex.email] || "N/A",
+                        phone: row[colIndex.phone] || "N/A",
+                        weightGrams: row[colIndex.weightGrams] || "N/A",
+                        quantity: row[colIndex.quantity] || "N/A",
+                        totalKg: parseFloat(row[colIndex.totalKg]).toFixed(3) || "N/A",
+                        amount: row[colIndex.amount] || "N/A",
+                        address: row[colIndex.address] || "N/A",
+                        pinCode: row[colIndex.pinCode] || "N/A"
+                    });
+                }
+            }
+            
+            allOrders = todayOrders;
+            
+            // Update stats
+            document.getElementById("todaysTotal").innerText = totalKg.toFixed(2) + " kg";
+            document.getElementById("remaining").innerText = (9 - totalKg).toFixed(2) + " kg";
+            document.getElementById("usagePercent").innerText = Math.round((totalKg / 9) * 100);
+            document.getElementById("orderCount").innerText = todayOrders.length;
+            
+            // Update progress bar
+            const percentage = (totalKg / 9) * 100;
+            const bar = document.getElementById("usageBar");
+            bar.style.width = Math.min(percentage, 100) + "%";
+            
+            if (percentage < 50) {
+                bar.style.background = "#27ae60";
+            } else if (percentage < 80) {
+                bar.style.background = "#f39c12";
+            } else {
+                bar.style.background = "#e74c3c";
+            }
+            
+            // Update timestamp
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' });
+            document.getElementById("lastUpdate").innerText = timeStr;
+            
+            // Display orders
+            displayOrders(todayOrders);
+            
+            console.log("✅ Updated: " + todayOrders.length + " orders, " + totalKg.toFixed(2) + "kg");
+            
+        } catch (error) {
+            console.error("❌ Error fetching data:", error);
+            document.getElementById("ordersBody").innerHTML = '<tr><td colspan="11" class="no-data">❌ Error loading data: ' + error.message + '</td></tr>';
+        }
+    }
+    
+    // ===== DISPLAY ORDERS =====
+    function displayOrders(orders) {
+        const ordersBody = document.getElementById("ordersBody");
+        
+        if (orders.length === 0) {
+            ordersBody.innerHTML = '<tr><td colspan="11" class="no-data">No orders today yet</td></tr>';
+            return;
+        }
+        
+        let html = "";
+        orders.forEach(order => {
+            html += `
+                <tr>
+                    <td><strong>${order.orderId}</strong></td>
+                    <td>${order.timestamp}</td>
+                    <td>${order.customerName}</td>
+                    <td>${order.email}</td>
+                    <td>${order.phone}</td>
+                    <td>${order.weightGrams}</td>
+                    <td>${order.quantity}</td>
+                    <td>${order.totalKg}</td>
+                    <td>${order.amount}</td>
+                    <td>${order.address}</td>
+                    <td>${order.pinCode}</td>
+                </tr>
+            `;
+        });
+        
+        ordersBody.innerHTML = html;
+    }
+    
+    // ===== ENABLE ORDERING =====
+    function enableOrdering() {
+        orderingEnabled = true;
+        updateOrderingStatus();
+        alert("✅ Ordering ENABLED");
+    }
+    
+    // ===== DISABLE ORDERING =====
+    function disableOrdering() {
+        orderingEnabled = false;
+        updateOrderingStatus();
+        alert("✅ Ordering DISABLED");
+    }
+    
+    // ===== UPDATE ORDERING STATUS =====
+    function updateOrderingStatus() {
+        const statusDiv = document.getElementById("orderingStatus");
+        const enableBtn = document.getElementById("enableBtn");
+        const disableBtn = document.getElementById("disableBtn");
+        
+        if (orderingEnabled) {
+            statusDiv.innerHTML = '<div class="status-active">✅ Ordering is ENABLED<br>Customers can place orders</div>';
+            enableBtn.style.display = "none";
+            disableBtn.style.display = "block";
+        } else {
+            statusDiv.innerHTML = '<div class="status-inactive">❌ Ordering is DISABLED<br>Daily limit reached</div>';
+            enableBtn.style.display = "block";
+            disableBtn.style.display = "none";
+        }
+    }
+    
+    // ===== UPDATE DAILY LIMIT =====
+    function updateDailyLimit() {
+        const newLimit = document.getElementById("dailyLimit").value;
+        if (!newLimit || newLimit <= 0) {
+            alert("❌ Please enter a valid limit");
+            return;
+        }
+        alert("✅ Daily limit updated to " + newLimit + "kg");
+    }
+    
+    // ===== INITIALIZE =====
+    window.onload = function() {
+        updateOrderingStatus();
+        
+        // Show setup if no sheet ID
+        if (!sheetId && isLoggedIn) {
+            document.getElementById("setupSection").style.display = "block";
+        }
+    };
+</script>
+
+</body>
+</html>
