@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Bullion Booking System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #c5a028;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #c5a028;
+            box-shadow: 0 0 5px rgba(197, 160, 40, 0.3);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-secondary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #2980b9;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            font-size: 24px;
+            font-weight: 700;
+            color: #c5a028;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .summary-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .summary-table td:first-child {
+            font-weight: 600;
+            color: #555;
+            width: 40%;
+        }
+        
+        .summary-table td:last-child {
+            color: #333;
+            text-align: right;
+        }
+        
+        .payment-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .qr-code {
+            width: 250px;
+            height: 250px;
+            background: white;
+            border: 2px solid #c5a028;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .upi-text {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #856404;
+            font-weight: 600;
+        }
+        
+        .file-upload-section {
+            background: #e8f5e9;
+            border: 2px dashed #4caf50;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .file-upload-section input[type="file"] {
+            display: none;
+        }
+        
+        .file-upload-btn {
+            background: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        
+        .file-upload-btn:hover {
+            background: #45a049;
+        }
+        
+        #proofFileName {
+            color: #4caf50;
+            font-weight: 600;
+            display: block;
+            margin-top: 10px;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #c5a028;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .step-indicator {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🥇 Gold Bullion Booking System</h1>
+    
+    <!-- STEP 1: ORDER FORM -->
+    <div id="step1-form">
+        <div class="step-indicator">📝 Step 1: Fill Your Order Details</div>
+        
+        <form id="orderForm">
+            <div class="form-group">
+                <label>Customer Name *</label>
+                <input type="text" id="custName" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Email Address *</label>
+                <input type="email" id="custEmail" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Phone Number *</label>
+                <input type="tel" id="custPhone" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Gold Weight Selection *</label>
+                <select id="goldWeight" required>
+                    <option value="">-- Select Weight --</option>
+                    <option value="250">250g - ₹500</option>
+                    <option value="500">500g - ₹1000</option>
+                    <option value="1000">1000g - ₹2000</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Quantity *</label>
+                <input type="number" id="goldQuantity" min="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Delivery Method *</label>
+                <select id="deliveryMethod" required>
+                    <option value="">-- Select Delivery --</option>
+                    <option value="Self Pick-up">Self Pick-up (PIN: 600016)</option>
+                    <option value="Courier Delivery">Courier Delivery (30km radius)</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="deliveryAddressGroup" style="display: none;">
+                <label>Delivery Address</label>
+                <textarea id="deliveryAddress" placeholder="Enter your delivery address"></textarea>
+            </div>
+            
+            <div class="form-group" id="pinCodeGroup" style="display: none;">
+                <label>PIN Code</label>
+                <input type="text" id="pinCode" placeholder="Enter your PIN code">
+            </div>
+            
+            <div class="button-group">
+                <button type="button" onclick="generateOrderSummary()" class="btn-primary">
+                    ✅ Generate & Confirm Order
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: ORDER SUMMARY -->
+<div id="summaryModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">📋 Order Summary</div>
+        
+        <div class="step-indicator">Step 2: Review Your Order</div>
+        
+        <table class="summary-table">
+            <tr>
+                <td>Customer Name:</td>
+                <td id="summaryName"></td>
+            </tr>
+            <tr>
+                <td>Email:</td>
+                <td id="summaryEmail"></td>
+            </tr>
+            <tr>
+                <td>Phone:</td>
+                <td id="summaryPhone"></td>
+            </tr>
+            <tr>
+                <td>Gold Weight:</td>
+                <td id="summaryWeight"></td>
+            </tr>
+            <tr>
+                <td>Quantity:</td>
+                <td id="summaryQuantity"></td>
+            </tr>
+            <tr>
+                <td>Total Weight:</td>
+                <td id="summaryTotalWeight"></td>
+            </tr>
+            <tr>
+                <td>Delivery Method:</td>
+                <td id="summaryDelivery"></td>
+            </tr>
+            <tr style="background: #f0f0f0; font-weight: 700; font-size: 16px;">
+                <td>Total Amount:</td>
+                <td style="color: #c5a028;">₹<span id="summaryAmount"></span></td>
+            </tr>
+        </table>
+        
+        <div class="button-group">
+            <button onclick="confirmOrderAndCheckQuota()" class="btn-primary">
+                ✅ Confirm & Check Quota
+            </button>
+            <button onclick="closeModal('summaryModal')" class="btn-danger">
+                ❌ Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: PAYMENT PAGE -->
+<div id="paymentModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">💳 Payment Information</div>
+        
+        <div class="step-indicator">Step 3: Make Payment</div>
+        
+        <div class="payment-section">
+            <h3>Scan QR Code to Pay</h3>
+            <div class="qr-code">
+                [QR Code Image Here]<br>
+                📱 Scan with UPI App
+            </div>
+            
+            <div class="upi-text">
+                💰 UPI: 9884908910@hdfc
+            </div>
+            
+            <p style="color: #666; margin: 15px 0;">
+                Amount to Pay: <strong style="font-size: 18px; color: #c5a028;">₹<span id="paymentAmount"></span></strong>
+            </p>
+        </div>
+        
+        <div class="section-title">✅ I have made the payment</div>
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 20px;">
+            <input type="checkbox" id="paymentConfirm" onchange="toggleTransactionIdField()">
+            <span>I have completed the UPI payment</span>
+        </label>
+        
+        <div id="transactionIdSection" style="display: none;">
+            <div class="form-group">
+                <label>(Optional) Transaction ID / UTR Number</label>
+                <input type="text" id="transactionId" placeholder="e.g., 123456789">
+            </div>
+        </div>
+        
+        <div id="proofUploadSection" style="display: none;">
+            <div class="section-title">📸 Upload Payment Proof (MANDATORY)</div>
+            <p style="color: #666; margin-bottom: 15px;">
+                Please upload a screenshot of the successful payment
+            </p>
+            
+            <div class="file-upload-section">
+                <label for="paymentProofFile" class="file-upload-btn">
+                    📷 Click to Upload Screenshot
+                </label>
+                <input type="file" id="paymentProofFile" accept="image/*" onchange="onProofFileSelected()">
+                <div id="proofFileName"></div>
+            </div>
+            
+            <div id="proofStatusMessage"></div>
+            
+            <div id="completeOrderSection" style="display: none;">
+                <button onclick="completeOrderAndSave()" class="btn-primary" style="width: 100%; padding: 15px;">
+                    ✅ Complete Order & Send Confirmation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== CONFIGURATION =====
+    const API_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
+    const MERCHANT_UPI = "9884908910@hdfc";
+    
+    // ===== DELIVERY METHOD HANDLING =====
+    document.getElementById("deliveryMethod").addEventListener("change", function() {
+        const isPickup = this.value === "Self Pick-up";
+        document.getElementById("deliveryAddressGroup").style.display = isPickup ? "none" : "block";
+        document.getElementById("pinCodeGroup").style.display = isPickup ? "none" : "block";
+        
+        if (isPickup) {
+            document.getElementById("deliveryAddress").value = "Self Pick-up";
+            document.getElementById("pinCode").value = "600016";
+        }
+    });
+    
+    // ===== STEP 1: GENERATE ORDER SUMMARY =====
+    function generateOrderSummary() {
+        const name = document.getElementById("custName").value;
+        const email = document.getElementById("custEmail").value;
+        const phone = document.getElementById("custPhone").value;
+        const weight = document.getElementById("goldWeight").value;
+        const qty = document.getElementById("goldQuantity").value;
+        const delivery = document.getElementById("deliveryMethod").value;
+        
+        // Validation
+        if (!name || !email || !phone || !weight || !qty || !delivery) {
+            alert("❌ Please fill all required fields");
+            return;
+        }
+        
+        // Calculate totals
+        const totalKg = (parseInt(weight) * parseInt(qty)) / 1000;
+        const unitPrice = getPriceForWeight(parseInt(weight));
+        const totalAmount = unitPrice * parseInt(qty);
+        
+        // Populate summary
+        document.getElementById("summaryName").innerText = name;
+        document.getElementById("summaryEmail").innerText = email;
+        document.getElementById("summaryPhone").innerText = phone;
+        document.getElementById("summaryWeight").innerText = weight + "g";
+        document.getElementById("summaryQuantity").innerText = qty;
+        document.getElementById("summaryTotalWeight").innerText = totalKg.toFixed(3) + " kg";
+        document.getElementById("summaryDelivery").innerText = delivery;
+        document.getElementById("summaryAmount").innerText = totalAmount;
+        document.getElementById("paymentAmount").innerText = totalAmount;
+        
+        // Show summary modal
+        openModal("summaryModal");
+    }
+    
+    // ===== STEP 2: CONFIRM ORDER & CHECK QUOTA =====
+    async function confirmOrderAndCheckQuota() {
+        console.log("🔍 Checking quota...");
+        closeModal("summaryModal");
+        
+        const weight = parseInt(document.getElementById("goldWeight").value);
+        const qty = parseInt(document.getElementById("goldQuantity").value);
+        
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({
+                    action: "checkQuota",
+                    weightGrams: weight,
+                    quantity: qty
+                })
+            });
+            
+            console.log("✅ Quota check submitted");
+            
+            // Proceed to payment (backend will reject if quota exceeded)
+            openModal("paymentModal");
+            
+        } catch (error) {
+            console.error("❌ Quota check error:", error);
+            alert("❌ Error checking quota: " + error.message);
+        }
+    }
+    
+    // ===== STEP 3: PAYMENT CONFIRMATION =====
+    function toggleTransactionIdField() {
+        const isConfirmed = document.getElementById("paymentConfirm").checked;
+        document.getElementById("transactionIdSection").style.display = isConfirmed ? "block" : "none";
+        document.getElementById("proofUploadSection").style.display = isConfirmed ? "block" : "none";
+    }
+    
+    // ===== STEP 4: UPLOAD PAYMENT PROOF =====
+    function onProofFileSelected() {
+        const fileInput = document.getElementById("paymentProofFile");
+        const file = fileInput.files[0];
+        
+        if (!file) return;
+        
+        if (file.size > 5 * 1024 * 1024) {
+            alert("❌ File size must be less than 5MB");
+            fileInput.value = "";
+            return;
+        }
+        
+        document.getElementById("proofFileName").innerHTML = `✅ ${file.name} uploaded`;
+        document.getElementById("completeOrderSection").style.display = "block";
+    }
+    
+    // ===== STEP 5: COMPLETE ORDER & SAVE =====
+    async function completeOrderAndSave() {
+        console.log("💾 Saving order...");
+        
+        const name = document.getElementById("custName").value;
+        const email = document.getElementById("custEmail").value;
+        const phone = document.getElementById("custPhone").value;
+        const weight = parseInt(document.getElementById("goldWeight").value);
+        const qty = parseInt(document.getElementById("goldQuantity").value);
+        const delivery = document.getElementById("deliveryMethod").value;
+        const address = document.getElementById("deliveryAddress").value || "N/A";
+        const pincode = document.getElementById("pinCode").value || "600016";
+        const transactionId = document.getElementById("transactionId").value || "";
+        
+        const fileInput = document.getElementById("paymentProofFile");
+        if (!fileInput.files || !fileInput.files[0]) {
+            alert("❌ Please upload payment proof");
+            return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            const fileData = e.target.result;
+            const unitPrice = getPriceForWeight(weight);
+            const totalAmount = unitPrice * qty;
+            const orderId = "ORD" + Date.now();
+            
+            try {
+                const orderPayload = {
+                    action: "submitOrder",
+                    orderId: orderId,
+                    customerName: name,
+                    customerEmail: email,
+                    customerPhone: phone,
+                    weightGrams: weight,
+                    quantity: qty,
+                    amount: totalAmount,
+                    deliveryMethod: delivery,
+                    address: address,
+                    pinCode: pincode,
+                    utrNumber: transactionId,
+                    fileData: fileData,
+                    fileName: "payment_proof_" + orderId + ".jpg"
+                };
+                
+                console.log("📤 Submitting order to backend...");
+                
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    body: JSON.stringify(orderPayload)
+                });
+                
+                console.log("✅ Order submitted successfully");
+                
+                // Show success
+                showSuccessMessage(orderId, totalAmount, email);
+                
+                // Reset form
+                document.getElementById("orderForm").reset();
+                closeModal("paymentModal");
+                
+            } catch (error) {
+                console.error("❌ Order submission error:", error);
+                alert("❌ Error submitting order: " + error.message);
+            }
+        };
+        
+        reader.readAsDataURL(fileInput.files[0]);
+    }
+    
+    // ===== SUCCESS MESSAGE =====
+    function showSuccessMessage(orderId, amount, email) {
+        alert(`
+✅ ORDER CONFIRMED SUCCESSFULLY!
+
+Order ID: ${orderId}
+Amount: ₹${amount}
+
+Payment Proof: ✅ Uploaded to Drive
+Status: ✅ PAID
+Email: Confirmation sent to ${email}
+
+Thank you for your order!
+        `);
+    }
+    
+    // ===== UTILITY FUNCTIONS =====
+    function getPriceForWeight(weight) {
+        if (weight == 250) return 500;
+        if (weight == 500) return 1000;
+        if (weight == 1000) return 2000;
+        return 500;
+    }
+    
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = "block";
+    }
+    
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+    
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        const summaryModal = document.getElementById("summaryModal");
+        const paymentModal = document.getElementById("paymentModal");
+        
+        if (event.target == summaryModal) {
+            summaryModal.style.display = "none";
+        }
+        if (event.target == paymentModal) {
+            paymentModal.style.display = "none";
+        }
+    }
+</script>
+
+</body>
+</html>
