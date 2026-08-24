@@ -579,9 +579,9 @@
         </div>
     </div>
 
-    <!-- Firebase SDK (Compat Version) -->
+    <!-- Firebase SDK (Firestore Compat) -->
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 
     <script>
         // Firebase Configuration (PUBLIC - SAFE)
@@ -591,8 +591,7 @@
             projectId: "cynthias-kitchen-20d9c",
             storageBucket: "cynthias-kitchen-20d9c.firebasestorage.app",
             messagingSenderId: "765768686506",
-            appId: "1:765768686506:web:74c9b0c3ca2a9eec0869d3",
-            databaseURL: "https://cynthias-kitchen-20d9c-default-rtdb.asia-southeast1.firebasedatabase.app"
+            appId: "1:765768686506:web:74c9b0c3ca2a9eec0869d3"
         };
 
         let db = null;
@@ -614,24 +613,22 @@
                 // Check if already initialized
                 if (firebase.apps && firebase.apps.length > 0) {
                     console.log("ℹ️ Firebase already initialized");
-                    db = firebase.database();
+                    db = firebase.firestore();
                 } else {
                     firebase.initializeApp(firebaseConfig);
-                    db = firebase.database();
+                    db = firebase.firestore();
                 }
                 
                 firebaseReady = true;
                 window.db = db;
-                console.log("✅ Firebase initialized successfully!");
-                console.log("📍 Database URL:", firebaseConfig.databaseURL);
+                console.log("✅ Firebase Firestore initialized successfully!");
+                console.log("📍 Project ID:", firebaseConfig.projectId);
                 
                 // Test connection
-                db.ref('.info/connected').on('value', (snapshot) => {
-                    if (snapshot.val() === true) {
-                        console.log("✅ Connected to Firebase!");
-                    } else {
-                        console.log("⚠️ Disconnected from Firebase");
-                    }
+                db.collection('orders').limit(1).get().then(() => {
+                    console.log("✅ Connected to Firestore!");
+                }).catch(error => {
+                    console.log("⚠️ Firestore connection test:", error.message);
                 });
                 
             } catch(error) {
@@ -859,8 +856,11 @@
             updateFinalAmount();
         }
 
+        // Maximum stock allowed per day (you can change this)
+        const MAX_STOCK_AVAILABLE = 9000; // 9kg in grams
+
         function loadStockData() {
-            console.log("📊 Attempting to load stock from Firebase...");
+            console.log("📊 Attempting to load stock from Firestore...");
             
             // Check if Firebase is ready
             if (!firebaseReady || !window.db) {
@@ -870,22 +870,52 @@
             }
 
             try {
-                console.log("🔄 Reading stock from Firebase...");
+                console.log("🔄 Reading orders to calculate available stock...");
                 
-                // Real-time listener for stock
-                db.ref('stock/today').on('value', (snapshot) => {
-                    if (snapshot.exists()) {
-                        stockAvailable = snapshot.val();
-                        console.log("✅ Stock loaded from Firebase:", stockAvailable, "g");
-                    } else {
-                        console.warn("⚠️ No stock data found in Firebase at 'stock/today'");
-                        stockAvailable = 0;
+                // Real-time listener for stock calculation
+                db.collection('orders').onSnapshot(snapshot => {
+                    const today = new Date().toLocaleDateString('en-IN');
+                    let totalGramsOrdered = 0;
+                    let ordersCount = 0;
+
+                    snapshot.forEach(doc => {
+                        const order = doc.data();
+                        
+                        // Extract date from timestamp or createdAt
+                        const orderDateStr = order.timestamp || order.createdAt;
+                        const orderDate = orderDateStr ? orderDateStr.split(',')[0] : '';
+                        
+                        // Count PAID orders only (status: Pending or Completed)
+                        if (orderDate === today && (order.status === 'Pending' || order.status === 'Completed')) {
+                            totalGramsOrdered += parseInt(order.totalWeight || 0) * 1000; // Convert kg to grams
+                            ordersCount++;
+                            console.log("✅ PAID Order counted:", order.orderId, "weight:", order.totalWeight, "kg");
+                        } else if (orderDate === today) {
+                            console.log("⏳ Unpaid order NOT counted:", order.orderId, "status:", order.status);
+                        }
+                    });
+
+                    // Calculate available stock
+                    stockAvailable = MAX_STOCK_AVAILABLE - totalGramsOrdered;
+                    if (stockAvailable < 0) stockAvailable = 0;
+
+                    console.log("📊 Total grams ordered today:", totalGramsOrdered);
+                    console.log("📊 Max available:", MAX_STOCK_AVAILABLE, "g");
+                    console.log("📊 Stock remaining:", stockAvailable, "g");
+                    console.log("📊 Orders counted:", ordersCount);
+
+                    // Update display
+                    const stockKg = (stockAvailable / 1000).toFixed(2);
+                    document.getElementById('stockDisplay').textContent = `📦 Available Today: ${stockKg}kg (${stockAvailable}g)`;
+
+                    // Close orders if stock exhausted
+                    if (stockAvailable <= 0) {
+                        document.getElementById('orderForm').style.opacity = '0.5';
+                        document.getElementById('orderForm').style.pointerEvents = 'none';
+                        showError('Daily stock limit reached! Orders are closed for today.');
                     }
-                    
-                    // Always update the display
-                    document.getElementById('stockDisplay').textContent = `📦 Available Today: ${stockAvailable}g`;
                 }, (error) => {
-                    console.error("❌ Firebase stock read error:", error.message);
+                    console.error("❌ Firestore stock calculation error:", error.message);
                     document.getElementById('stockDisplay').textContent = `📦 Available Today: Error`;
                 });
             } catch(error) {
@@ -947,17 +977,20 @@
                 createdAt: new Date().toISOString()
             };
 
-            // Save to Firebase (REQUIRED)
+            // Save to Firestore (REQUIRED)
             if (window.db) {
-                db.ref('orders/' + orderId).set(orderData).then(() => {
-                    console.log("✅ Order saved to Firebase:", orderId);
+                db.collection('orders').add(orderData).then((docRef) => {
+                    console.log("✅ Order saved to Firestore:", orderId, "Doc ID:", docRef.id);
+                    // Store current order for payment
+                    window.currentOrderId = orderId;
+                    window.currentOrderDocId = docRef.id;
                 }).catch(error => {
-                    console.error("❌ Firebase save error:", error);
+                    console.error("❌ Firestore save error:", error);
                     showError("Error saving order. Please try again.");
                     return;
                 });
             } else {
-                showError("Firebase not connected. Please try again.");
+                showError("Firestore not connected. Please try again.");
                 return;
             }
 
@@ -1045,22 +1078,29 @@
             }
 
             if (!window.db) {
-                showError('Firebase not available. Try again later.');
+                showError('Firestore not available. Try again later.');
                 return;
             }
 
-            // Fetch order from Firebase
-            db.ref('orders').orderByChild('orderId').equalTo(orderId).once('value', (snapshot) => {
-                if (snapshot.exists()) {
-                    const order = Object.values(snapshot.val())[0];
-                    displayOrderDetails(order);
-                } else {
-                    showError('Order not found');
-                }
-            }).catch(error => {
-                console.error("Search error:", error);
-                showError('Error searching order: ' + error.message);
-            });
+            // Fetch order from Firestore
+            db.collection('orders')
+                .where('orderId', '==', orderId)
+                .limit(1)
+                .get()
+                .then(snapshot => {
+                    if (!snapshot.empty) {
+                        const doc = snapshot.docs[0];
+                        const order = doc.data();
+                        order.firebaseDocId = doc.id;
+                        displayOrderDetails(order);
+                    } else {
+                        showError('Order not found');
+                    }
+                })
+                .catch(error => {
+                    console.error("Search error:", error);
+                    showError('Error searching order: ' + error.message);
+                });
         }
 
         function displayOrderDetails(order) {
