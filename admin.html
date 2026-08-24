@@ -87,12 +87,16 @@
             background: #d4edda;
             color: #155724;
         }
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔐 Admin Dashboard</h1>
-        <div id="firebaseStatus" class="status-message" style="display: none;"></div>
+        <div id="firebaseStatus" class="status-message loading">Loading Firebase...</div>
 
         <div id="loginSection">
             <div class="login-form">
@@ -109,14 +113,12 @@
         </div>
     </div>
 
-    <!-- Firebase Compat version - works with regular script tags -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/firestore.js"></script>
 
     <script>
-        console.log("Admin page loaded, starting Firebase...");
+        console.log("Admin script started");
         
-        // YOUR NEW API KEY - REPLACE THIS
         const firebaseConfig = {
             apiKey: "AIzaSyCPjnhrb6IGmmDiDSVkmesO7-dewm_6-aI",
             authDomain: "gold-orders.firebaseapp.com",
@@ -126,23 +128,46 @@
             appId: "1:889006387701:web:c567caa1ec22f95697b0bc"
         };
 
-        try {
-            console.log("Initializing Firebase...");
-            firebase.initializeApp(firebaseConfig);
-            console.log("✅ Firebase app initialized");
+        let retries = 0;
+        const maxRetries = 50;
+
+        function tryInitialize() {
+            retries++;
+            console.log(`Attempt ${retries}: Checking for firebase...`);
             
-            const db = firebase.firestore();
-            console.log("✅ Firestore connected");
-            
-            document.getElementById('firebaseStatus').innerHTML = '✅ Firebase Connected Successfully';
-            document.getElementById('firebaseStatus').classList.add('success-msg');
-            document.getElementById('firebaseStatus').style.display = 'block';
-            console.log("✅✅✅ ADMIN PANEL READY ✅✅✅");
-            
-        } catch (error) {
-            console.error("❌ Error:", error.message);
-            document.getElementById('firebaseStatus').innerHTML = '❌ Firebase Error: ' + error.message;
-            document.getElementById('firebaseStatus').style.display = 'block';
+            if (typeof firebase !== 'undefined') {
+                console.log("✅ Firebase object found!");
+                initFirebase();
+            } else if (retries < maxRetries) {
+                console.log(`Firebase not ready yet, waiting...`);
+                setTimeout(tryInitialize, 100);
+            } else {
+                console.error("❌ Firebase failed to load after retries");
+                document.getElementById('firebaseStatus').innerHTML = '❌ Failed to load Firebase';
+                document.getElementById('firebaseStatus').style.background = '#f8d7da';
+                document.getElementById('firebaseStatus').style.color = '#721c24';
+            }
+        }
+
+        function initFirebase() {
+            try {
+                console.log("Initializing Firebase...");
+                firebase.initializeApp(firebaseConfig);
+                console.log("✅ Firebase initialized");
+                
+                const db = firebase.firestore();
+                console.log("✅ Firestore ready");
+                
+                document.getElementById('firebaseStatus').innerHTML = '✅ Firebase Connected Successfully';
+                document.getElementById('firebaseStatus').classList.add('success-msg');
+                console.log("✅✅✅ ADMIN PANEL READY ✅✅✅");
+                
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('firebaseStatus').innerHTML = '❌ Error: ' + error.message;
+                document.getElementById('firebaseStatus').style.background = '#f8d7da';
+                document.getElementById('firebaseStatus').style.color = '#721c24';
+            }
         }
 
         function adminLogin() {
@@ -163,6 +188,9 @@
             document.getElementById('adminPassword').value = '';
             console.log("👋 Admin logged out");
         }
+
+        // Start checking for Firebase
+        tryInitialize();
     </script>
 </body>
 </html>
