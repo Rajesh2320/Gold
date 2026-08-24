@@ -319,6 +319,23 @@
             border-radius: 8px;
             margin: 30px 0;
             display: none;
+            scroll-margin-top: 20px;
+        }
+
+        .payment-section.active {
+            display: block;
+            animation: slideDown 0.4s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .payment-header {
@@ -1111,8 +1128,10 @@
             document.getElementById('searchOrderId').value = '';
             document.getElementById('searchResults').innerHTML = '';
             
-            // Show payment section
-            document.getElementById('paymentSection').style.display = 'block';
+            // Show payment section with animation
+            const paymentSection = document.getElementById('paymentSection');
+            paymentSection.style.display = 'block';
+            paymentSection.classList.add('active');
             
             const amountString = document.getElementById('finalAmount').textContent;
             const amountNumber = parseInt(amountString.replace('₹', '').replace(/,/g, '')) || 0;
@@ -1126,7 +1145,11 @@
             // Generate QR Code with amount as number
             generatePaymentQRCode(orderId, amountNumber);
             
-            window.scrollTo(0, 0);
+            // CRITICAL: Scroll to the payment section and ensure it's visible
+            setTimeout(() => {
+                paymentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                console.log("✅ Scrolled to payment section");
+            }, 100);
         }
 
         function generatePaymentQRCode(orderId, amount) {
@@ -1214,11 +1237,22 @@
         }
 
         function goBackFromPayment() {
-            document.getElementById('paymentSection').style.display = 'none';
+            // Hide payment section and remove active class
+            const paymentSection = document.getElementById('paymentSection');
+            paymentSection.style.display = 'none';
+            paymentSection.classList.remove('active');
+            
+            // Show order form again
+            document.getElementById('orderForm').style.display = 'block';
             document.getElementById('orderForm').reset();
+            
+            // Reset cart
             cart = {};
             renderProducts();
             updateCart();
+            
+            // Scroll to top of form
+            document.getElementById('orderForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function switchTab(tab) {
@@ -1299,8 +1333,8 @@
             let qrCodeUrl = '';
             
             if (!isPaid && !isCancelled) {
-                // Generate QR code URL
-                const upiString = `upi://pay?pa=7827850404@upi&pn=Gold Shop&am=${amount}&tn=Order ${order.orderId}`;
+                // Generate QR code URL with correct UPI ID
+                const upiString = `upi://pay?pa=9884908910@hdfc&pn=Gold Shop&am=${amount}&tn=Order ${order.orderId}`;
                 const encodedUPI = encodeURIComponent(upiString);
                 qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedUPI}`;
                 
@@ -1311,9 +1345,9 @@
                             <img src="${qrCodeUrl}" alt="Payment QR Code" style="max-width: 150px; border: 2px solid #ff9800; border-radius: 4px;">
                         </div>
                         <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">Use this UPI ID to pay ₹${amount.toLocaleString()}:</p>
-                        <p style="margin: 0 0 10px 0; font-family: monospace; background: white; padding: 8px; border-radius: 4px; font-weight: bold;">7827850404@upi</p>
+                        <p style="margin: 0 0 10px 0; font-family: monospace; background: white; padding: 8px; border-radius: 4px; font-weight: bold;">9884908910@hdfc</p>
                         <button onclick="openUPIApp('${amount}')" style="background: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600; margin-right: 10px;">💳 Pay via UPI</button>
-                        <button onclick="copyToClipboard('7827850404@upi')" style="background: #667eea; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600;">📋 Copy UPI ID</button>
+                        <button onclick="copyToClipboard('9884908910@hdfc')" style="background: #667eea; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600;">📋 Copy UPI ID</button>
                     </div>
                 `;
             }
@@ -1358,7 +1392,7 @@
         }
 
         function openUPIApp(amount) {
-            const upiString = `upi://pay?pa=7827850404@upi&pn=Gold Shop&am=${amount}&tn=Payment`;
+            const upiString = `upi://pay?pa=9884908910@hdfc&pn=Gold Shop&am=${amount}&tn=Payment`;
             window.location.href = upiString;
         }
     </script>
