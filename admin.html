@@ -3,269 +3,688 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Gold Orders - Admin Dashboard</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
         }
-
         .container {
-            max-width: 1200px;
+            max-width: 1600px;
             margin: 0 auto;
             background: white;
             padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
 
         .header {
-            text-align: center;
-            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #c5a028;
+            padding-bottom: 20px;
         }
-
-        .header h1 {
+        h1 {
             color: #c5a028;
-            margin-bottom: 10px;
-            font-size: 36px;
+            font-size: 28px;
         }
-
-        .status-message {
-            text-align: center;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
-            font-weight: bold;
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
         }
-
-        .success-msg {
-            background: #d4edda;
-            color: #155724;
-        }
-
+        
         .login-form {
-            max-width: 400px;
-            margin: 50px auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .login-form input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .login-form input:focus {
+            outline: none;
+            border-color: #c5a028;
+        }
+        .login-form button {
+            padding: 8px 20px;
+            background: #c5a028;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .login-form button:hover {
+            background: #a68a1f;
+        }
+
+        .dashboard { display: none; }
+        .dashboard.active { display: block; }
+
+        .analytics-section {
+            background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
             padding: 30px;
-            background: #fff9f0;
-            border-radius: 8px;
+            border-radius: 12px;
+            margin-bottom: 30px;
             border-left: 4px solid #c5a028;
         }
 
-        label {
-            display: block;
+        .analytics-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-top: 3px solid #c5a028;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
             font-weight: 600;
-            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #c5a028;
+        }
+
+        .orders-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-top: 3px solid #c5a028;
+        }
+
+        .orders-header {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .orders-header input,
+        .orders-header select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 5px;
+        }
+
+        .btn-edit {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #0056b3;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .btn-proof {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-proof:hover {
+            background: #218838;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
             color: #333;
         }
 
-        input {
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
+            padding: 8px;
             border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-            box-sizing: border-box;
+            border-radius: 4px;
+            font-size: 14px;
         }
 
-        input:focus {
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: #c5a028;
         }
 
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #c5a028;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 16px;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-
-        button:hover {
-            background: #a68620;
-        }
-
-        .reject-btn {
-            background: #dc3545;
-            width: 48%;
-            margin-right: 2%;
-        }
-
-        .reject-btn:hover {
-            background: #c82333;
-        }
-
-        .admin-panel {
-            display: none;
-        }
-
-        .admin-toolbar {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .admin-toolbar button {
-            flex: 1;
-            min-width: 150px;
-            margin: 0;
-        }
-
-        .logout-btn {
-            background: #dc3545 !important;
-        }
-
-        .logout-btn:hover {
-            background: #c82333 !important;
-        }
-
-        .orders-container {
-            display: grid;
-            gap: 20px;
-        }
-
-        .order-item {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #c5a028;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .order-info {
-            flex: 1;
-            min-width: 300px;
-        }
-
-        .order-info p {
-            margin: 8px 0;
-            line-height: 1.6;
-        }
-
-        .order-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .order-actions button {
-            flex: 1;
-            min-width: 150px;
-            padding: 10px;
-            font-size: 14px;
-            margin: 0;
-        }
-
         .status-badge {
             display: inline-block;
-            padding: 5px 10px;
+            padding: 4px 8px;
             border-radius: 4px;
-            background: #fff3cd;
-            color: #856404;
             font-size: 12px;
             font-weight: 600;
         }
 
-        .welcome-box {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        .status-pending-payment {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-pending {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .proof-modal-content {
+            background: white;
             padding: 30px;
             border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .logout-btn {
+            padding: 8px 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .loading {
             text-align: center;
-            margin-bottom: 30px;
-            border-left: 4px solid #28a745;
-        }
-
-        .welcome-box h2 {
-            color: #155724;
-            margin-bottom: 10px;
-        }
-
-        .welcome-box p {
-            color: #155724;
-        }
-
-        @media (max-width: 768px) {
-            .order-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .order-actions {
-                width: 100%;
-            }
-
-            .order-actions button {
-                flex: 1;
-            }
-
-            .admin-toolbar {
-                flex-direction: column;
-            }
-
-            .admin-toolbar button {
-                width: 100%;
-            }
+            padding: 20px;
+            color: #666;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <div class="header">
-            <h1>🔐 Admin Dashboard</h1>
-            <p>Manage Gold Orders</p>
-        </div>
-
-        <div id="firebaseStatus" class="status-message">Loading Firebase...</div>
-
-        <!-- Login Section -->
-        <div id="loginSection">
-            <div class="login-form">
-                <label>🔑 Admin Password:</label>
-                <input type="password" id="adminPassword" placeholder="Enter admin password" onkeypress="if(event.key==='Enter') adminLogin()">
-                <button onclick="adminLogin()">Login to Admin Panel</button>
+            <h1>🥇 Gold Orders Admin Dashboard</h1>
+            <div class="header-right">
+                <div class="login-form" id="loginForm">
+                    <input type="password" id="passwordInput" placeholder="Admin Password">
+                    <button onclick="login()">Login</button>
+                </div>
+                <button class="logout-btn" id="logoutBtn" onclick="logout()" style="display: none;">Logout</button>
             </div>
         </div>
 
-        <!-- Admin Panel -->
-        <div id="adminPanel" class="admin-panel">
-            <div class="welcome-box">
-                <h2>✅ Welcome to Admin Panel</h2>
-                <p>You are logged in as Administrator</p>
+        <!-- Dashboard (hidden until login) -->
+        <div class="dashboard" id="dashboard">
+            <!-- Error/Success Messages -->
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <!-- Analytics Section -->
+            <div class="analytics-section">
+                <div class="analytics-title">📊 Dashboard Statistics</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Orders (Today)</div>
+                        <div class="stat-value" id="totalOrdersToday">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Paid Orders</div>
+                        <div class="stat-value" id="paidOrders">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Pending Payment</div>
+                        <div class="stat-value" id="pendingPayment">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Total Amount Today (₹)</div>
+                        <div class="stat-value" id="totalAmountToday">₹0</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="admin-toolbar">
-                <button onclick="fetchPendingOrders()">📋 Pending Orders</button>
-                <button onclick="viewAllOrders()">📊 All Orders</button>
-                <button class="logout-btn" onclick="logout()">🚪 Logout</button>
-            </div>
+            <!-- Orders Section -->
+            <div class="orders-section">
+                <h2 style="margin-bottom: 20px; color: #333;">📋 Orders List</h2>
+                
+                <div class="orders-header">
+                    <input type="text" id="searchInput" placeholder="🔍 Search by name or phone..." onkeyup="filterTable()">
+                    <select id="statusFilter" onchange="filterTable()">
+                        <option value="">All Status</option>
+                        <option value="Pending Payment">Pending Payment</option>
+                        <option value="Pending">Paid (Pending)</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                    <input type="date" id="dateFilter" onchange="filterTable()">
+                </div>
 
-            <div id="ordersList" class="orders-container">
-                <p style="text-align: center; padding: 20px;">Click a button above to view orders</p>
+                <div id="loadingMessage" class="loading">Loading orders...</div>
+                <table id="ordersTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Amount (₹)</th>
+                            <th>Weight (kg)</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersBody"></tbody>
+                </table>
+                <div id="emptyMessage" style="text-align: center; padding: 20px; color: #999; display: none;">
+                    No orders found
+                </div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="/admin-main.js"></script>
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('editModal')">&times;</span>
+            <h2 style="margin-bottom: 20px; color: #c5a028;">Edit Order</h2>
+            <form id="editForm" onsubmit="saveOrder(event)">
+                <div class="form-group">
+                    <label>Order ID</label>
+                    <input type="text" id="editOrderId" readonly style="background: #f0f0f0;">
+                </div>
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" id="editName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="editEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="editPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editStatus" required>
+                        <option value="Pending Payment">Pending Payment</option>
+                        <option value="Pending">Paid (Pending)</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-edit" style="width: 100%; margin-top: 20px;">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Proof Modal -->
+    <div class="modal" id="proofModal">
+        <div class="proof-modal-content">
+            <span class="modal-close" onclick="closeModal('proofModal')">&times;</span>
+            <h2 style="margin-bottom: 20px; color: #c5a028;">Payment Proof</h2>
+            <div style="margin-bottom: 15px;">
+                <strong>Order ID:</strong> <span id="proofOrderId"></span><br>
+                <strong>Customer:</strong> <span id="proofCustomer"></span><br>
+                <strong>Amount:</strong> <span id="proofAmount"></span>
+            </div>
+            <img id="proofImage" src="" alt="Payment Proof" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase Configuration - GOLD-ORDERS PROJECT
+        const firebaseConfig = {
+            apiKey: "AIzaSyBfuY-Zw4WVeezMXHtSxV3uAndcPTzexXM",
+            authDomain: "gold-orders.firebaseapp.com",
+            projectId: "gold-orders",
+            storageBucket: "gold-orders.firebasestorage.app",
+            messagingSenderId: "889006387701",
+            appId: "1:889006387701:web:c567caa1ec22f95697b0bc"
+        };
+
+        let db = null;
+        let allOrders = [];
+        let currentEditDoc = null;
+        const ADMIN_PASSWORD = "Adm1n$gold#2325"; // Change this to your desired password
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        console.log("✅ Firebase initialized for admin panel!");
+
+        // Login
+        function login() {
+            const password = document.getElementById('passwordInput').value;
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('dashboard').classList.add('active');
+                document.getElementById('passwordInput').value = '';
+                loadOrders();
+            } else {
+                showError('Invalid password');
+            }
+        }
+
+        // Logout
+        function logout() {
+            document.getElementById('loginForm').style.display = 'flex';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('dashboard').classList.remove('active');
+            allOrders = [];
+        }
+
+        // Load Orders from Firestore
+        function loadOrders() {
+            console.log("📂 Loading orders...");
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('ordersTable').style.display = 'none';
+
+            db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+                allOrders = [];
+                snapshot.forEach(doc => {
+                    const order = doc.data();
+                    order.firebaseDocId = doc.id;
+                    allOrders.push(order);
+                });
+                
+                console.log("✅ Loaded", allOrders.length, "orders");
+                displayOrders(allOrders);
+                updateAnalytics();
+            });
+        }
+
+        // Display Orders in Table
+        function displayOrders(orders) {
+            const tbody = document.getElementById('ordersBody');
+            tbody.innerHTML = '';
+
+            if (orders.length === 0) {
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('emptyMessage').style.display = 'block';
+                document.getElementById('ordersTable').style.display = 'none';
+                return;
+            }
+
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                const statusClass = `status-${order.status.toLowerCase().replace(' ', '-')}`;
+                
+                row.innerHTML = `
+                    <td>${order.orderId}</td>
+                    <td>${order.customerName}</td>
+                    <td>${order.customerPhone}</td>
+                    <td>₹${parseInt(order.totalAmount).toLocaleString()}</td>
+                    <td>${order.totalWeight || order.totalKg || 0}kg</td>
+                    <td><span class="status-badge ${statusClass}">${order.status}</span></td>
+                    <td>${order.timestamp || order.createdAt}</td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editOrder('${order.firebaseDocId}')">Edit</button>
+                        <button class="btn btn-delete" onclick="deleteOrder('${order.firebaseDocId}')">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('ordersTable').style.display = 'table';
+        }
+
+        // Update Analytics
+        function updateAnalytics() {
+            const today = new Date().toLocaleDateString('en-IN');
+            let todayOrders = 0;
+            let paidCount = 0;
+            let pendingPaymentCount = 0;
+            let totalAmount = 0;
+
+            allOrders.forEach(order => {
+                const orderDate = order.timestamp ? order.timestamp.split(',')[0] : '';
+                if (orderDate === today) {
+                    todayOrders++;
+                    totalAmount += parseInt(order.totalAmount || 0);
+                    
+                    if (order.status === 'Pending Payment') {
+                        pendingPaymentCount++;
+                    } else {
+                        paidCount++;
+                    }
+                }
+            });
+
+            document.getElementById('totalOrdersToday').textContent = todayOrders;
+            document.getElementById('paidOrders').textContent = paidCount;
+            document.getElementById('pendingPayment').textContent = pendingPaymentCount;
+            document.getElementById('totalAmountToday').textContent = '₹' + totalAmount.toLocaleString();
+        }
+
+        // Filter Table
+        function filterTable() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+
+            const filtered = allOrders.filter(order => {
+                const matchSearch = !searchText || 
+                    order.customerName.toLowerCase().includes(searchText) ||
+                    order.customerPhone.includes(searchText);
+                
+                const matchStatus = !statusFilter || order.status === statusFilter;
+                
+                const orderDate = order.timestamp ? order.timestamp.split(',')[0] : '';
+                const matchDate = !dateFilter || orderDate === new Date(dateFilter).toLocaleDateString('en-IN');
+
+                return matchSearch && matchStatus && matchDate;
+            });
+
+            displayOrders(filtered);
+        }
+
+        // Edit Order
+        function editOrder(docId) {
+            const order = allOrders.find(o => o.firebaseDocId === docId);
+            if (!order) return;
+
+            currentEditDoc = docId;
+            document.getElementById('editOrderId').value = order.orderId;
+            document.getElementById('editName').value = order.customerName;
+            document.getElementById('editEmail').value = order.customerEmail;
+            document.getElementById('editPhone').value = order.customerPhone;
+            document.getElementById('editStatus').value = order.status;
+
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        // Save Order
+        async function saveOrder(event) {
+            event.preventDefault();
+
+            const updatedData = {
+                customerName: document.getElementById('editName').value,
+                customerEmail: document.getElementById('editEmail').value,
+                customerPhone: document.getElementById('editPhone').value,
+                status: document.getElementById('editStatus').value
+            };
+
+            try {
+                await db.collection('orders').doc(currentEditDoc).update(updatedData);
+                showSuccess('Order updated successfully!');
+                closeModal('editModal');
+                loadOrders();
+            } catch (error) {
+                showError('Error updating order: ' + error.message);
+            }
+        }
+
+        // Delete Order
+        async function deleteOrder(docId) {
+            if (!confirm('Are you sure you want to delete this order?')) return;
+
+            try {
+                await db.collection('orders').doc(docId).delete();
+                showSuccess('Order deleted successfully!');
+                loadOrders();
+            } catch (error) {
+                showError('Error deleting order: ' + error.message);
+            }
+        }
+
+        // Close Modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Show Error
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        // Show Success
+        function showSuccess(message) {
+            const el = document.getElementById('successMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+    </script>
 </body>
 </html>
