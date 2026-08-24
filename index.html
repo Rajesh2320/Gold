@@ -960,7 +960,7 @@
                 }
             }
 
-            // Store order data
+            // Create order data
             const orderId = 'ORD' + Date.now();
             const orderData = {
                 orderId: orderId,
@@ -974,35 +974,45 @@
                 address: document.getElementById('deliveryAddress').value,
                 pincode: document.getElementById('pincode').value,
                 status: 'Pending Payment',
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                timestamp: new Date().toLocaleDateString('en-IN') + ', ' + new Date().toLocaleTimeString('en-IN')
             };
 
+            console.log("💾 Attempting to save order to Firestore...");
+            console.log("Order data:", orderData);
+
             // Save to Firestore (REQUIRED)
-            if (window.db) {
-                db.collection('orders').add(orderData).then((docRef) => {
-                    console.log("✅ Order saved to Firestore:", orderId, "Doc ID:", docRef.id);
-                    // Store current order for payment
-                    window.currentOrderId = orderId;
-                    window.currentOrderDocId = docRef.id;
-                }).catch(error => {
-                    console.error("❌ Firestore save error:", error);
-                    showError("Error saving order. Please try again.");
-                    return;
-                });
-            } else {
+            if (!window.db) {
                 showError("Firestore not connected. Please try again.");
                 return;
             }
 
-            // Show payment section
-            showPaymentSection();
+            // Add to Firestore and wait for completion
+            db.collection('orders').add(orderData).then((docRef) => {
+                console.log("✅ Order successfully saved to Firestore!");
+                console.log("Order ID:", orderId);
+                console.log("Document ID:", docRef.id);
+                
+                // Store order IDs globally
+                window.currentOrderId = orderId;
+                window.currentOrderDocId = docRef.id;
+                
+                // Now show payment section with the correct order ID
+                showPaymentSectionWithOrder(orderId);
+                
+            }).catch(error => {
+                console.error("❌ Firestore save error:", error);
+                console.error("Error code:", error.code);
+                console.error("Error message:", error.message);
+                showError("❌ Error saving order: " + error.message);
+            });
         }
 
-        function showPaymentSection() {
+        function showPaymentSectionWithOrder(orderId) {
+            console.log("🎯 Showing payment section for Order:", orderId);
+            
             document.getElementById('paymentSection').style.display = 'block';
             
-            // Generate Order ID
-            const orderId = 'ORD' + Date.now();
             const finalAmount = document.getElementById('finalAmount').textContent.replace('₹', '').replace(/,/g, '');
             
             document.getElementById('payOrderId').textContent = orderId;
