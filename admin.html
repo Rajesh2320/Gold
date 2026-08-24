@@ -73,16 +73,31 @@
             background: #dc3545 !important;
             margin-top: 20px;
         }
+        .logout-btn:hover {
+            background: #c82333 !important;
+        }
+        .status-message {
+            text-align: center;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .success-msg {
+            background: #d4edda;
+            color: #155724;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔐 Admin Dashboard</h1>
+        <div id="firebaseStatus" class="status-message" style="display: none;"></div>
 
         <div id="loginSection">
             <div class="login-form">
                 <label>🔑 Admin Password:</label>
-                <input type="password" id="adminPassword" placeholder="Enter admin password">
+                <input type="password" id="adminPassword" placeholder="Enter admin password" onkeypress="if(event.key==='Enter') adminLogin()">
                 <button onclick="adminLogin()">Login</button>
             </div>
         </div>
@@ -94,11 +109,14 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+    <!-- Firebase Compat version - works with regular script tags -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/firestore.js"></script>
 
     <script>
-        // Replace with your NEW API key
+        console.log("Admin page loaded, starting Firebase...");
+        
+        // YOUR NEW API KEY - REPLACE THIS
         const firebaseConfig = {
             apiKey: "AIzaSyCPjnhrb6IGmmDiDSVkmesO7-dewm_6-aI",
             authDomain: "gold-orders.firebaseapp.com",
@@ -109,12 +127,22 @@
         };
 
         try {
-            console.log("Starting Firebase initialization...");
+            console.log("Initializing Firebase...");
             firebase.initializeApp(firebaseConfig);
+            console.log("✅ Firebase app initialized");
+            
             const db = firebase.firestore();
-            console.log("✅ Firebase initialized successfully!");
+            console.log("✅ Firestore connected");
+            
+            document.getElementById('firebaseStatus').innerHTML = '✅ Firebase Connected Successfully';
+            document.getElementById('firebaseStatus').classList.add('success-msg');
+            document.getElementById('firebaseStatus').style.display = 'block';
+            console.log("✅✅✅ ADMIN PANEL READY ✅✅✅");
+            
         } catch (error) {
-            console.error("Error:", error);
+            console.error("❌ Error:", error.message);
+            document.getElementById('firebaseStatus').innerHTML = '❌ Firebase Error: ' + error.message;
+            document.getElementById('firebaseStatus').style.display = 'block';
         }
 
         function adminLogin() {
@@ -122,8 +150,10 @@
             if (password === 'admin123') {
                 document.getElementById('loginSection').style.display = 'none';
                 document.getElementById('adminPanel').style.display = 'block';
+                console.log("✅ Admin logged in");
             } else {
-                alert("Wrong password!");
+                alert("❌ Wrong password!");
+                document.getElementById('adminPassword').value = '';
             }
         }
 
@@ -131,6 +161,7 @@
             document.getElementById('adminPanel').style.display = 'none';
             document.getElementById('loginSection').style.display = 'block';
             document.getElementById('adminPassword').value = '';
+            console.log("👋 Admin logged out");
         }
     </script>
 </body>
