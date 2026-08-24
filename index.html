@@ -981,6 +981,10 @@
             const timestamp = now.toLocaleDateString('en-IN') + ', ' + now.toLocaleTimeString('en-IN');
             const totalWeightKg = totalWeight / 1000; // Convert grams to kg
             
+            // Parse amount - remove ₹ and commas
+            const amountString = document.getElementById('finalAmount').textContent;
+            const amountNumber = parseInt(amountString.replace('₹', '').replace(/,/g, '')) || 0;
+            
             const orderData = {
                 orderId: orderId,
                 customerName: document.getElementById('customerName').value,
@@ -989,7 +993,8 @@
                 totalWeight: totalWeightKg, // In kg
                 totalKg: totalWeightKg, // Also store as totalKg for compatibility
                 totalItems: totalItems,
-                totalAmount: document.getElementById('finalAmount').textContent,
+                totalAmount: amountNumber, // Store as number, not string
+                totalAmountFormatted: amountString, // Store formatted version too
                 deliveryType: selectedDeliveryType,
                 address: document.getElementById('deliveryAddress').value,
                 pincode: document.getElementById('pincode').value,
@@ -1035,13 +1040,14 @@
             
             document.getElementById('paymentSection').style.display = 'block';
             
-            const finalAmount = document.getElementById('finalAmount').textContent.replace('₹', '').replace(/,/g, '');
+            const amountString = document.getElementById('finalAmount').textContent;
+            const amountNumber = parseInt(amountString.replace('₹', '').replace(/,/g, '')) || 0;
             
             document.getElementById('payOrderId').textContent = orderId;
-            document.getElementById('payAmount').textContent = document.getElementById('finalAmount').textContent;
+            document.getElementById('payAmount').textContent = amountString;
             
-            // Generate QR Code
-            generatePaymentQRCode(orderId, finalAmount);
+            // Generate QR Code with amount as number
+            generatePaymentQRCode(orderId, amountNumber);
             
             window.scrollTo(0, 0);
         }
