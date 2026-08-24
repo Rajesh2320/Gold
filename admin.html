@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #c5a028;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .login-form {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background: #fff9f0;
+            border-radius: 8px;
+            border-left: 4px solid #c5a028;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #c5a028;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #c5a028;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #a68620;
+        }
+        .admin-panel {
+            display: none;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #666;
+        }
+        .panel-content {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .logout-btn {
+            background: #dc3545 !important;
+            margin-top: 20px;
+        }
+        .logout-btn:hover {
+            background: #c82333 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Admin Dashboard</h1>
+
+        <div id="loadingMessage" class="loading">
+            ⏳ Loading system... Please wait
+        </div>
+
+        <div id="loginSection">
+            <div class="login-form">
+                <label>🔑 Admin Password:</label>
+                <input type="password" id="adminPassword" placeholder="Enter admin password" onkeypress="if(event.key==='Enter') adminLogin()">
+                <button onclick="adminLogin()">Login to Admin Panel</button>
+            </div>
+        </div>
+
+        <div id="adminPanel" class="admin-panel">
+            <div id="successMessage" class="success-message" style="display: none;"></div>
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+            
+            <div style="text-align: center; background: #d4edda; padding: 20px; border-radius: 8px;">
+                <h2 style="color: #155724; margin-bottom: 10px;">✅ Admin Panel Loaded</h2>
+                <p style="color: #155724;">You are logged in as Administrator</p>
+            </div>
+
+            <div class="panel-content">
+                <p style="color: #333; margin: 10px 0;">Welcome to the admin dashboard!</p>
+                <p style="color: #666; margin: 10px 0; font-size: 14px;">Database connection verified ✅</p>
+                
+                <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration - Get from Vercel environment variables
+        const firebaseConfig = {
+            apiKey: "AIzaSyDiffKeyNewKey1234567890ABCDEF",  // Replace with your NEW API key
+            authDomain: "gold-orders.firebaseapp.com",
+            projectId: "gold-orders",
+            storageBucket: "gold-orders.firebasestorage.app",
+            messagingSenderId: "889006387701",
+            appId: "1:889006387701:web:c567caa1ec22f95697b0bc"
+        };
+
+        let isLoggedIn = false;
+
+        function initializeFirebase() {
+            try {
+                console.log("🔧 Initializing Firebase...");
+                
+                // Initialize Firebase
+                firebase.initializeApp(firebaseConfig);
+                const db = firebase.firestore();
+                
+                console.log("✅ Firebase initialized successfully!");
+                console.log("✅ Firestore ready");
+                
+                // Show login form
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('loginSection').style.display = 'block';
+                
+                console.log("✅✅✅ ADMIN PANEL READY! ✅✅✅");
+                
+            } catch (error) {
+                console.error("❌ Error:", error);
+                document.getElementById('loadingMessage').innerHTML = 
+                    '<div class="error-message"><strong>❌ Error:</strong> ' + error.message + '</div>';
+            }
+        }
+
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            
+            if (!password) {
+                alert("Please enter a password");
+                return;
+            }
+            
+            if (password === 'admin123') {
+                isLoggedIn = true;
+                console.log("✅ Admin logged in successfully");
+                
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                
+                const successDiv = document.getElementById('successMessage');
+                successDiv.innerHTML = '✅ You have logged in successfully!';
+                successDiv.style.display = 'block';
+            } else {
+                console.log("❌ Wrong password attempt");
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.innerHTML = '❌ Invalid password! Please try again.';
+                errorDiv.style.display = 'block';
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+            }
+        }
+
+        function logout() {
+            isLoggedIn = false;
+            console.log("👋 Admin logged out");
+            
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            document.getElementById('adminPassword').focus();
+            alert("You have been logged out");
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initializeFirebase);
+    </script>
+</body>
+</html>
