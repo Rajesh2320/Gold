@@ -904,13 +904,13 @@
                     }
                 }
                 
-                // Total revenue
-                if (order.status !== 'Pending Payment' && order.status !== 'Cancelled') {
+                // Total revenue - Only Paid and Completed orders
+                if (order.status === 'Paid' || order.status === 'Completed') {
                     totalRevenue += amount;
                 }
                 
-                // Outstanding amount (only truly unpaid orders)
-                if (order.status === 'Pending Payment') {
+                // Outstanding amount (only truly unpaid orders - Pending Payment AND Proof Submitted)
+                if (order.status === 'Pending Payment' || order.status === 'Proof Submitted') {
                     outstandingAmount += amount;
                 }
                 
@@ -924,7 +924,11 @@
                 if (parsedDate && parsedDate.getMonth() === currentMonth && parsedDate.getFullYear() === currentYear) {
                     monthOrders++;
                     uniqueCustomersMonth.add(order.customerPhone);
-                    monthRevenue += amount;
+                    
+                    // Add to month revenue only if confirmed paid/completed
+                    if (order.status === 'Paid' || order.status === 'Completed') {
+                        monthRevenue += amount;
+                    }
                     
                     // Track customer repeat orders and revenue
                     const phone = order.customerPhone;
@@ -932,40 +936,45 @@
                         customerRevenue[phone] = { name: order.customerName, count: 0, revenue: 0, kgs: 0 };
                     }
                     customerRevenue[phone].count++;
-                    if (order.status !== 'Pending Payment' && order.status !== 'Cancelled') {
+                    if (order.status === 'Paid' || order.status === 'Completed') {
                         customerRevenue[phone].revenue += amount;
                     }
                     const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
                     customerRevenue[phone].kgs += kgs;
                 }
                 
-                // Status breakdown (Proof Submitted is treated as verified payment)
+                // Status breakdown - Only Paid and Completed count as verified paid
                 if (order.status === 'Paid') paidCount++;
-                else if (order.status === 'Proof Submitted') paidCount++; // Count as paid
                 else if (order.status === 'Completed') completedCount++;
                 else if (order.status === 'Cancelled') cancelledCount++;
                 else if (order.status === 'Dispute') disputeCount++;
-                else if (order.status === 'Pending Payment') pendingPaymentCount++;
+                else if (order.status === 'Pending Payment' || order.status === 'Proof Submitted') pendingPaymentCount++;
                 
-                // Delivery type
+                // Delivery type - Only count revenue for paid/completed orders
                 if (order.deliveryType === 'pickup') {
                     pickupCount++;
-                    pickupRevenue += amount;
+                    if (order.status === 'Paid' || order.status === 'Completed') {
+                        pickupRevenue += amount;
+                    }
                 } else if (order.deliveryType === 'delivery') {
                     deliveryCount++;
-                    deliveryRevenue += amount;
+                    if (order.status === 'Paid' || order.status === 'Completed') {
+                        deliveryRevenue += amount;
+                    }
                 }
                 
-                // Product analytics
+                // Product analytics - Count all orders but only for those with weight data
                 const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
                 if (kgs <= 0.3) productOrders['250g']++;
                 else if (kgs <= 0.6) productOrders['500g']++;
                 else productOrders['1kg']++;
                 
-                // Hourly orders (today only)
+                // Hourly orders (today only) - Only count paid/completed for revenue
                 if (orderDate === today) {
                     hourlyOrders[hour].count++;
-                    hourlyOrders[hour].revenue += amount;
+                    if (order.status === 'Paid' || order.status === 'Completed') {
+                        hourlyOrders[hour].revenue += amount;
+                    }
                 }
             });
             
@@ -1223,12 +1232,13 @@
                     }
                     day.totalAmount += amount;
                     
-                    if (order.status === 'Pending Payment') {
-                        day.unpaidOrders++;
-                    } else {
+                    // Only count Paid and Completed as verified paid (NOT Proof Submitted)
+                    if (order.status === 'Paid' || order.status === 'Completed') {
                         day.paidOrders++;
                         day.paidKgs += kgs;
                         day.paidAmount += amount;
+                    } else {
+                        day.unpaidOrders++;
                     }
                 }
             });
@@ -1290,12 +1300,13 @@
                         }
                         mtdData.totalAmount += amount;
                         
-                        if (order.status === 'Pending Payment') {
-                            mtdData.unpaidOrders++;
-                        } else {
+                        // Only count Paid and Completed as verified paid (NOT Proof Submitted)
+                        if (order.status === 'Paid' || order.status === 'Completed') {
                             mtdData.paidOrders++;
                             mtdData.paidKgs += kgs;
                             mtdData.paidAmount += amount;
+                        } else {
+                            mtdData.unpaidOrders++;
                         }
                     }
                 }
