@@ -584,14 +584,14 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // Firebase Configuration (PUBLIC - SAFE)
+        // Firebase Configuration - GOLD-ORDERS PROJECT
         const firebaseConfig = {
-            apiKey: "AIzaSyBqEYxTu9qC8Jibt7ydIRdQ-fYAeheseFY",
-            authDomain: "cynthias-kitchen-20d9c.firebaseapp.com",
-            projectId: "cynthias-kitchen-20d9c",
-            storageBucket: "cynthias-kitchen-20d9c.firebasestorage.app",
-            messagingSenderId: "765768686506",
-            appId: "1:765768686506:web:74c9b0c3ca2a9eec0869d3"
+            apiKey: "AIzaSyBfuY-Zw4WVeezMXHtSxV3uAndcPTzexXM",
+            authDomain: "gold-orders.firebaseapp.com",
+            projectId: "gold-orders",
+            storageBucket: "gold-orders.firebasestorage.app",
+            messagingSenderId: "889006387701",
+            appId: "1:889006387701:web:c567caa1ec22f95697b0bc"
         };
 
         let db = null;
@@ -623,6 +623,7 @@
                 window.db = db;
                 console.log("✅ Firebase Firestore initialized successfully!");
                 console.log("📍 Project ID:", firebaseConfig.projectId);
+                console.log("🌍 Auth Domain:", firebaseConfig.authDomain);
                 
                 // Test connection
                 db.collection('orders').limit(1).get().then(() => {
