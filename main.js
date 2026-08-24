@@ -30,7 +30,7 @@ try {
   
   // Show order form
   document.getElementById('status').style.display = 'none';
-  document.getElementById('orderForm').style.display = 'block';
+  document.getElementById('mainContent').style.display = 'block';
   
   console.log("✅✅✅ ALL SYSTEMS GO ✅✅✅");
   
