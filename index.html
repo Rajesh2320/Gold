@@ -883,13 +883,27 @@
                         
                         // Extract date from timestamp or createdAt
                         const orderDateStr = order.timestamp || order.createdAt;
-                        const orderDate = orderDateStr ? orderDateStr.split(',')[0] : '';
+                        let orderDate = '';
+                        
+                        if (orderDateStr) {
+                            // Handle both formats: "dd/mm/yyyy, ..." or ISO format
+                            if (orderDateStr.includes(',')) {
+                                orderDate = orderDateStr.split(',')[0].trim();
+                            } else if (orderDateStr.includes('T')) {
+                                // ISO format - convert to dd/mm/yyyy
+                                const d = new Date(orderDateStr);
+                                orderDate = d.toLocaleDateString('en-IN');
+                            }
+                        }
+                        
+                        console.log("📋 Order found:", order.orderId, "Date:", orderDate, "Status:", order.status, "Weight:", order.totalWeight, "kg");
                         
                         // Count PAID orders only (status: Pending or Completed)
                         if (orderDate === today && (order.status === 'Pending' || order.status === 'Completed')) {
-                            totalGramsOrdered += parseInt(order.totalWeight || 0) * 1000; // Convert kg to grams
+                            const weightKg = parseFloat(order.totalWeight || order.totalKg || 0);
+                            totalGramsOrdered += weightKg * 1000; // Convert kg to grams
                             ordersCount++;
-                            console.log("✅ PAID Order counted:", order.orderId, "weight:", order.totalWeight, "kg");
+                            console.log("✅ PAID Order counted:", order.orderId, "weight:", weightKg, "kg");
                         } else if (orderDate === today) {
                             console.log("⏳ Unpaid order NOT counted:", order.orderId, "status:", order.status);
                         }
@@ -962,20 +976,25 @@
 
             // Create order data
             const orderId = 'ORD' + Date.now();
+            const now = new Date();
+            const timestamp = now.toLocaleDateString('en-IN') + ', ' + now.toLocaleTimeString('en-IN');
+            const totalWeightKg = totalWeight / 1000; // Convert grams to kg
+            
             const orderData = {
                 orderId: orderId,
                 customerName: document.getElementById('customerName').value,
                 customerEmail: document.getElementById('customerEmail').value,
                 customerPhone: document.getElementById('customerPhone').value,
-                totalWeight: totalWeight,
+                totalWeight: totalWeightKg, // In kg
+                totalKg: totalWeightKg, // Also store as totalKg for compatibility
                 totalItems: totalItems,
                 totalAmount: document.getElementById('finalAmount').textContent,
                 deliveryType: selectedDeliveryType,
                 address: document.getElementById('deliveryAddress').value,
                 pincode: document.getElementById('pincode').value,
                 status: 'Pending Payment',
-                createdAt: new Date().toISOString(),
-                timestamp: new Date().toLocaleDateString('en-IN') + ', ' + new Date().toLocaleTimeString('en-IN')
+                createdAt: now.toISOString(),
+                timestamp: timestamp // Format: "dd/mm/yyyy, hh:mm:ss"
             };
 
             console.log("💾 Attempting to save order to Firestore...");
@@ -988,24 +1007,26 @@
             }
 
             // Add to Firestore and wait for completion
-            db.collection('orders').add(orderData).then((docRef) => {
-                console.log("✅ Order successfully saved to Firestore!");
-                console.log("Order ID:", orderId);
-                console.log("Document ID:", docRef.id);
-                
-                // Store order IDs globally
-                window.currentOrderId = orderId;
-                window.currentOrderDocId = docRef.id;
-                
-                // Now show payment section with the correct order ID
-                showPaymentSectionWithOrder(orderId);
-                
-            }).catch(error => {
-                console.error("❌ Firestore save error:", error);
-                console.error("Error code:", error.code);
-                console.error("Error message:", error.message);
-                showError("❌ Error saving order: " + error.message);
-            });
+            db.collection('orders').add(orderData)
+                .then((docRef) => {
+                    console.log("✅ Order successfully saved to Firestore!");
+                    console.log("Order ID:", orderId);
+                    console.log("Document ID:", docRef.id);
+                    
+                    // Store order IDs globally
+                    window.currentOrderId = orderId;
+                    window.currentOrderDocId = docRef.id;
+                    
+                    // Now show payment section with the correct order ID
+                    showPaymentSectionWithOrder(orderId);
+                })
+                .catch((error) => {
+                    console.error("❌ Firestore save error!");
+                    console.error("Error code:", error.code);
+                    console.error("Error message:", error.message);
+                    console.error("Full error:", error);
+                    showError("❌ Error saving order: " + error.message);
+                });
         }
 
         function showPaymentSectionWithOrder(orderId) {
