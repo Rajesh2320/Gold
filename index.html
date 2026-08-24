@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Booking System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #c5a028 0%, #a68620 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            background: #f9f9f9;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 4px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: #c5a028;
+            border-bottom-color: #c5a028;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #c5a028;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        button {
+            background: #c5a028;
+            color: white;
+            padding: 14px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #a68620;
+        }
+
+        .success-message, .error-message {
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .order-details {
+            background: #f0f8ff;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+
+        .order-details p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .price-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        #status {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🥇 Gold Booking System</h1>
+            <p>Secure Gold Orders & Payments</p>
+        </div>
+
+        <div id="status">⏳ Loading system... Please wait</div>
+
+        <div id="mainContent" style="display: none;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('order-tab')">📝 Place Order</button>
+                <button class="tab-btn" onclick="switchTab('search-tab')">🔍 Search Order</button>
+            </div>
+
+            <!-- Order Form Tab -->
+            <div id="order-tab" class="tab-content active">
+                <div id="successMessage" class="success-message"></div>
+                <div id="errorMessage" class="error-message"></div>
+
+                <form id="orderFormElement" onsubmit="submitOrder(event)">
+                    <h2 style="margin-bottom: 30px; color: #333;">Place Your Order</h2>
+
+                    <!-- Customer Info -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customerName">👤 Full Name *</label>
+                            <input type="text" id="customerName" placeholder="Enter your full name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="customerPhone">📱 Phone Number *</label>
+                            <input type="tel" id="customerPhone" placeholder="10-digit phone number" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customerEmail">📧 Email Address *</label>
+                        <input type="email" id="customerEmail" placeholder="your@email.com" required>
+                    </div>
+
+                    <!-- Gold Selection -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="goldType">🥇 Gold Type *</label>
+                            <select id="goldType" onchange="handleGoldTypeChange()" required>
+                                <option value="">Select Gold Type</option>
+                                <option value="gold-biscuit">Gold Biscuit</option>
+                                <option value="gold-coin">Gold Coin</option>
+                                <option value="gold-bar">Gold Bar</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="weight">⚖️ Weight (grams) *</label>
+                            <input type="number" id="weight" placeholder="Enter weight" step="0.01" min="0" oninput="calculateTotal()" required>
+                        </div>
+                    </div>
+
+                    <div id="priceInfo" class="price-info">
+                        <p>Select a gold type to see pricing information</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalAmount">💰 Total Amount (₹) *</label>
+                        <input type="number" id="totalAmount" placeholder="0" readonly style="background: #f0f0f0;">
+                    </div>
+
+                    <!-- Delivery Address -->
+                    <div class="form-group">
+                        <label for="deliveryAddress">📍 Delivery Address *</label>
+                        <textarea id="deliveryAddress" placeholder="Enter complete delivery address" required></textarea>
+                    </div>
+
+                    <button type="submit">✅ Place Order</button>
+                </form>
+            </div>
+
+            <!-- Search Order Tab -->
+            <div id="search-tab" class="tab-content">
+                <h2 style="margin-bottom: 30px; color: #333;">Search Your Order</h2>
+
+                <form id="searchForm" onsubmit="searchOrder(event)">
+                    <div class="form-group">
+                        <label for="searchOrderId">🔍 Order ID</label>
+                        <input type="text" id="searchOrderId" placeholder="Enter your Order ID (e.g., ORD1787550870051)" required>
+                    </div>
+                    <button type="submit">Search Order</button>
+                </form>
+
+                <div id="searchResults" style="margin-top: 30px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="orderForm" style="display: none;"></div>
+
+    <script type="module" src="/main.js"></script>
+    <script>
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active state from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+
+            // Mark button as active
+            event.target.classList.add('active');
+        }
+
+        // Auto-open search tab if URL has ?id= parameter
+        window.addEventListener('load', function() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('id')) {
+                const tabs = document.querySelectorAll('.tab-btn');
+                tabs[1].click();
+            }
+        });
+    </script>
+</body>
+</html>
