@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Order Form</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #c5a028;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🥇 Gold Booking System</h1>
+        <div id="status"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js"></script>
+
+    <script>
+        // Replace with your NEW API key
+        const firebaseConfig = {
+            apiKey: "REPLACE_WITH_YOUR_NEW_KEY",
+            authDomain: "gold-orders.firebaseapp.com",
+            projectId: "gold-orders",
+            storageBucket: "gold-orders.firebasestorage.app",
+            messagingSenderId: "889006387701",
+            appId: "1:889006387701:web:c567caa1ec22f95697b0bc"
+        };
+
+        try {
+            console.log("Starting Firebase initialization...");
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            console.log("✅ Firebase initialized successfully!");
+            document.getElementById('status').innerHTML = '<div class="success">✅ System Connected Successfully!</div>';
+        } catch (error) {
+            console.error("Error:", error);
+            document.getElementById('status').innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
+        }
+    </script>
+</body>
+</html>

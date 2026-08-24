@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #c5a028;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .login-form {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background: #fff9f0;
+            border-radius: 8px;
+            border-left: 4px solid #c5a028;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #c5a028;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #a68620;
+        }
+        .admin-panel {
+            display: none;
+            text-align: center;
+            background: #d4edda;
+            padding: 30px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .logout-btn {
+            background: #dc3545 !important;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Admin Dashboard</h1>
+
+        <div id="loginSection">
+            <div class="login-form">
+                <label>🔑 Admin Password:</label>
+                <input type="password" id="adminPassword" placeholder="Enter admin password">
+                <button onclick="adminLogin()">Login</button>
+            </div>
+        </div>
+
+        <div id="adminPanel" class="admin-panel">
+            <h2>✅ Admin Panel Loaded</h2>
+            <p>You are logged in as Administrator</p>
+            <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+
+    <script>
+        // Replace with your NEW API key
+        const firebaseConfig = {
+            apiKey: "REPLACE_WITH_YOUR_NEW_KEY",
+            authDomain: "gold-orders.firebaseapp.com",
+            projectId: "gold-orders",
+            storageBucket: "gold-orders.firebasestorage.app",
+            messagingSenderId: "889006387701",
+            appId: "1:889006387701:web:c567caa1ec22f95697b0bc"
+        };
+
+        try {
+            console.log("Starting Firebase initialization...");
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            console.log("✅ Firebase initialized successfully!");
+        } catch (error) {
+            console.error("Error:", error);
+        }
+
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'admin123') {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+            } else {
+                alert("Wrong password!");
+            }
+        }
+
+        function logout() {
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('adminPassword').value = '';
+        }
+    </script>
+</body>
+</html>
