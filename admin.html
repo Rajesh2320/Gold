@@ -145,11 +145,13 @@
             font-weight: 600;
             color: #333;
             border-bottom: 2px solid #ddd;
+            font-size: 13px;
         }
 
         td {
             padding: 12px;
             border-bottom: 1px solid #ddd;
+            font-size: 14px;
         }
 
         tr:hover {
@@ -353,6 +355,22 @@
             <div class="error-message" id="errorMessage"></div>
             <div class="success-message" id="successMessage"></div>
 
+            <!-- Admin Controls -->
+            <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #ffc107;">
+                <div style="display: flex; align-items: center; gap: 15px; justify-content: space-between;">
+                    <div>
+                        <h3 style="margin-bottom: 5px; color: #856404;">🔒 Order Access Control</h3>
+                        <p style="color: #856404; font-size: 14px;">Toggle to enable/disable customer ordering</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="ordersToggle" onchange="toggleOrdersStatus()" style="width: 20px; height: 20px; cursor: pointer;">
+                            <span id="ordersStatusText" style="font-weight: bold; color: #856404;">Loading...</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Analytics Section -->
             <div class="analytics-section">
                 <div class="analytics-title">📊 Dashboard Statistics</div>
@@ -376,37 +394,85 @@
                 </div>
             </div>
 
+            <!-- Past 3 Days Analytics -->
+            <div class="orders-section">
+                <h2 style="margin-bottom: 20px; color: #333;">📅 Past 3 Days Summary</h2>
+                <div style="overflow-x: auto;">
+                    <table style="margin-top: 0;">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Total Orders</th>
+                                <th>Total KGs</th>
+                                <th>Total Amount (₹)</th>
+                                <th style="color: #28a745; font-weight: bold;">Paid Orders</th>
+                                <th style="color: #28a745;">Paid KGs</th>
+                                <th style="color: #ff9800; font-weight: bold;">Unpaid Orders</th>
+                            </tr>
+                        </thead>
+                        <tbody id="past3DaysBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MTD Summary -->
+            <div class="orders-section">
+                <h2 style="margin-bottom: 20px; color: #333;">📊 MTD (Month To Date) Summary</h2>
+                <div style="overflow-x: auto;">
+                    <table style="margin-top: 0;">
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Total Orders</th>
+                                <th>Total KGs</th>
+                                <th>Total Amount (₹)</th>
+                                <th style="color: #28a745; font-weight: bold;">Paid Orders</th>
+                                <th style="color: #28a745;">Paid KGs</th>
+                                <th style="color: #ff9800; font-weight: bold;">Unpaid Orders</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mtdSummaryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Orders Section -->
             <div class="orders-section">
-                <h2 style="margin-bottom: 20px; color: #333;">📋 Orders List</h2>
+                <h2 style="margin-bottom: 20px; color: #333;">📋 All Orders</h2>
                 
                 <div class="orders-header">
                     <input type="text" id="searchInput" placeholder="🔍 Search by name or phone..." onkeyup="filterTable()">
                     <select id="statusFilter" onchange="filterTable()">
                         <option value="">All Status</option>
                         <option value="Pending Payment">Pending Payment</option>
-                        <option value="Pending">Paid (Pending)</option>
+                        <option value="Paid">Paid</option>
                         <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                        <option value="Dispute">Dispute</option>
                     </select>
                     <input type="date" id="dateFilter" onchange="filterTable()">
                 </div>
 
                 <div id="loadingMessage" class="loading">Loading orders...</div>
-                <table id="ordersTable" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Customer</th>
-                            <th>Phone</th>
-                            <th>Amount (₹)</th>
-                            <th>Weight (kg)</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersBody"></tbody>
-                </table>
+                <div style="overflow-x: auto;">
+                    <table id="ordersTable" style="display: none; font-size: 12px;">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Email</th>
+                                <th>KGs</th>
+                                <th>Amount (₹)</th>
+                                <th>Delivery Type</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersBody"></tbody>
+                    </table>
+                </div>
                 <div id="emptyMessage" style="text-align: center; padding: 20px; color: #999; display: none;">
                     No orders found
                 </div>
@@ -496,6 +562,7 @@
                 document.getElementById('logoutBtn').style.display = 'block';
                 document.getElementById('dashboard').classList.add('active');
                 document.getElementById('passwordInput').value = '';
+                loadOrdersStatus();
                 loadOrders();
             } else {
                 showError('Invalid password');
@@ -548,17 +615,20 @@
 
         // Display Orders in Table
         function displayOrders(orders) {
+            console.log("🖼️  Displaying orders, count:", orders.length);
             const tbody = document.getElementById('ordersBody');
             tbody.innerHTML = '';
 
             if (orders.length === 0) {
+                console.log("⚠️  No orders to display");
                 document.getElementById('loadingMessage').style.display = 'none';
                 document.getElementById('emptyMessage').style.display = 'block';
                 document.getElementById('ordersTable').style.display = 'none';
                 return;
             }
 
-            orders.forEach(order => {
+            orders.forEach((order, index) => {
+                console.log(`Creating row ${index + 1} for order:`, order.orderId);
                 const row = document.createElement('tr');
                 const statusClass = `status-${order.status.toLowerCase().replace(' ', '-')}`;
                 
@@ -568,22 +638,30 @@
                     amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
                 }
                 
+                const kgs = order.totalWeight || order.totalKg || 0;
+                const deliveryType = order.deliveryType === 'delivery' ? '🚚 Delivery' : '🏪 Pickup';
+                
                 row.innerHTML = `
                     <td>${order.orderId}</td>
                     <td>${order.customerName}</td>
                     <td>${order.customerPhone}</td>
+                    <td>${order.customerEmail}</td>
+                    <td>${kgs}kg</td>
                     <td>₹${amount.toLocaleString()}</td>
-                    <td>${order.totalWeight || order.totalKg || 0}kg</td>
+                    <td>${deliveryType}</td>
                     <td><span class="status-badge ${statusClass}">${order.status}</span></td>
                     <td>${order.timestamp || order.createdAt}</td>
-                    <td>
-                        <button class="btn btn-edit" onclick="editOrder('${order.firebaseDocId}')">Edit</button>
-                        <button class="btn btn-delete" onclick="deleteOrder('${order.firebaseDocId}')">Delete</button>
+                    <td style="display: flex; gap: 4px; flex-wrap: wrap;">
+                        <button class="btn btn-edit" onclick="updateOrderStatus('${order.firebaseDocId}', '${order.orderId}')" style="padding: 4px 8px; font-size: 11px;">Status</button>
+                        <button class="btn" onclick="sendWhatsApp('${order.customerPhone}', '${order.orderId}')" style="background: #25D366; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">WhatsApp</button>
+                        <button class="btn" onclick="sendEmail('${order.customerEmail}', '${order.orderId}')" style="background: #EA4335; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">Email</button>
+                        <button class="btn btn-delete" onclick="deleteOrder('${order.firebaseDocId}')" style="padding: 4px 8px; font-size: 11px;">Delete</button>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
 
+            console.log("✅ Display complete, showing", orders.length, "rows");
             document.getElementById('loadingMessage').style.display = 'none';
             document.getElementById('ordersTable').style.display = 'table';
         }
@@ -620,6 +698,152 @@
             document.getElementById('paidOrders').textContent = paidCount;
             document.getElementById('pendingPayment').textContent = pendingPaymentCount;
             document.getElementById('totalAmountToday').textContent = '₹' + totalAmount.toLocaleString();
+            
+            // Update analytics tables
+            updatePast3DaysSummary();
+            updateMTDSummary();
+        }
+
+        // Get date in dd/mm/yyyy format
+        function formatDateDDMMYYYY(date) {
+            return date.toLocaleDateString('en-IN');
+        }
+
+        // Parse date from dd/mm/yyyy string
+        function parseDateDDMMYYYY(dateStr) {
+            if (!dateStr) return null;
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return null;
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+
+        // Update Past 3 Days Summary
+        function updatePast3DaysSummary() {
+            const tbody = document.getElementById('past3DaysBody');
+            tbody.innerHTML = '';
+            
+            const daysData = {};
+            const today = new Date();
+            
+            // Initialize last 3 days
+            for (let i = 2; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = formatDateDDMMYYYY(date);
+                daysData[dateStr] = {
+                    date: dateStr,
+                    totalOrders: 0,
+                    totalKgs: 0,
+                    totalAmount: 0,
+                    paidOrders: 0,
+                    paidKgs: 0,
+                    unpaidOrders: 0
+                };
+            }
+            
+            // Populate data from orders
+            allOrders.forEach(order => {
+                const orderDate = order.timestamp ? order.timestamp.split(',')[0] : '';
+                if (daysData[orderDate]) {
+                    const day = daysData[orderDate];
+                    day.totalOrders++;
+                    
+                    const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
+                    day.totalKgs += kgs;
+                    
+                    // Parse amount
+                    let amount = order.totalAmount;
+                    if (typeof amount === 'string') {
+                        amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
+                    }
+                    day.totalAmount += amount;
+                    
+                    if (order.status === 'Pending Payment') {
+                        day.unpaidOrders++;
+                    } else {
+                        day.paidOrders++;
+                        day.paidKgs += kgs;
+                    }
+                }
+            });
+            
+            // Display rows
+            Object.keys(daysData).sort().forEach(dateStr => {
+                const day = daysData[dateStr];
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${day.date}</strong></td>
+                    <td>${day.totalOrders}</td>
+                    <td>${day.totalKgs.toFixed(2)}</td>
+                    <td><strong>₹${day.totalAmount.toLocaleString()}</strong></td>
+                    <td style="color: #28a745; font-weight: bold;">${day.paidOrders}</td>
+                    <td style="color: #28a745;">${day.paidKgs.toFixed(2)}</td>
+                    <td style="color: #ff9800; font-weight: bold;">${day.unpaidOrders}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Update MTD Summary
+        function updateMTDSummary() {
+            const tbody = document.getElementById('mtdSummaryBody');
+            tbody.innerHTML = '';
+            
+            const today = new Date();
+            const monthStr = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            let mtdData = {
+                period: monthStr,
+                totalOrders: 0,
+                totalKgs: 0,
+                totalAmount: 0,
+                paidOrders: 0,
+                paidKgs: 0,
+                unpaidOrders: 0
+            };
+            
+            // Sum all orders for current month
+            allOrders.forEach(order => {
+                const orderDate = order.timestamp ? order.timestamp.split(',')[0] : '';
+                if (orderDate) {
+                    const parsedDate = parseDateDDMMYYYY(orderDate);
+                    if (parsedDate && parsedDate.getMonth() === currentMonth && parsedDate.getFullYear() === currentYear) {
+                        mtdData.totalOrders++;
+                        
+                        const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
+                        mtdData.totalKgs += kgs;
+                        
+                        // Parse amount
+                        let amount = order.totalAmount;
+                        if (typeof amount === 'string') {
+                            amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
+                        }
+                        mtdData.totalAmount += amount;
+                        
+                        if (order.status === 'Pending Payment') {
+                            mtdData.unpaidOrders++;
+                        } else {
+                            mtdData.paidOrders++;
+                            mtdData.paidKgs += kgs;
+                        }
+                    }
+                }
+            });
+            
+            // Display row
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${mtdData.period}</strong></td>
+                <td>${mtdData.totalOrders}</td>
+                <td>${mtdData.totalKgs.toFixed(2)}</td>
+                <td><strong>₹${mtdData.totalAmount.toLocaleString()}</strong></td>
+                <td style="color: #28a745; font-weight: bold;">${mtdData.paidOrders}</td>
+                <td style="color: #28a745;">${mtdData.paidKgs.toFixed(2)}</td>
+                <td style="color: #ff9800; font-weight: bold;">${mtdData.unpaidOrders}</td>
+            `;
+            tbody.appendChild(row);
         }
 
         // Filter Table
@@ -645,39 +869,84 @@
         }
 
         // Edit Order
-        function editOrder(docId) {
-            const order = allOrders.find(o => o.firebaseDocId === docId);
-            if (!order) return;
-
-            currentEditDoc = docId;
-            document.getElementById('editOrderId').value = order.orderId;
-            document.getElementById('editName').value = order.customerName;
-            document.getElementById('editEmail').value = order.customerEmail;
-            document.getElementById('editPhone').value = order.customerPhone;
-            document.getElementById('editStatus').value = order.status;
-
-            document.getElementById('editModal').classList.add('active');
+        // Update Order Status
+        function updateOrderStatus(docId, orderId) {
+            const newStatus = prompt(`Update status for ${orderId}:\n1. Paid\n2. Cancelled\n3. Dispute\n\nEnter number (1/2/3):`, '');
+            
+            if (!newStatus) return;
+            
+            const statusMap = { '1': 'Paid', '2': 'Cancelled', '3': 'Dispute' };
+            const selectedStatus = statusMap[newStatus];
+            
+            if (!selectedStatus) {
+                showError('Invalid status option');
+                return;
+            }
+            
+            db.collection('orders').doc(docId).update({ status: selectedStatus })
+                .then(() => {
+                    showSuccess(`Order ${orderId} updated to ${selectedStatus}!`);
+                    loadOrders();
+                })
+                .catch(error => {
+                    showError('Error updating order: ' + error.message);
+                });
         }
 
-        // Save Order
-        async function saveOrder(event) {
-            event.preventDefault();
+        // Send WhatsApp Message
+        function sendWhatsApp(phone, orderId) {
+            const message = encodeURIComponent(`Hi, This is regarding your gold order ${orderId}. Please confirm the details and proceed with payment.`);
+            const whatsappUrl = `https://wa.me/91${phone}?text=${message}`;
+            window.open(whatsappUrl, '_blank');
+        }
 
-            const updatedData = {
-                customerName: document.getElementById('editName').value,
-                customerEmail: document.getElementById('editEmail').value,
-                customerPhone: document.getElementById('editPhone').value,
-                status: document.getElementById('editStatus').value
-            };
+        // Send Email
+        function sendEmail(email, orderId) {
+            const subject = encodeURIComponent(`Gold Order Confirmation - ${orderId}`);
+            const body = encodeURIComponent(`Hello,\n\nThis is confirmation of your gold order ${orderId}.\n\nPlease refer to your order details and proceed with payment.\n\nThank you!`);
+            window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+        }
 
+        // Toggle Orders Status
+        async function toggleOrdersStatus() {
+            const checkbox = document.getElementById('ordersToggle');
+            const newStatus = checkbox.checked;
+            
             try {
-                await db.collection('orders').doc(currentEditDoc).update(updatedData);
-                showSuccess('Order updated successfully!');
-                closeModal('editModal');
-                loadOrders();
+                // Update adminSettings in Firestore
+                await db.collection('adminSettings').doc('ordersEnabled').set({
+                    enabled: newStatus,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+                
+                updateOrdersStatusUI(newStatus);
+                showSuccess(newStatus ? '✅ Orders ENABLED - Customers can now order' : '🔒 Orders DISABLED - Customers blocked');
             } catch (error) {
-                showError('Error updating order: ' + error.message);
+                checkbox.checked = !newStatus;
+                showError('Error updating orders status: ' + error.message);
             }
+        }
+
+        // Update Orders Status UI
+        function updateOrdersStatusUI(enabled) {
+            document.getElementById('ordersToggle').checked = enabled;
+            document.getElementById('ordersStatusText').textContent = enabled ? '✅ ACTIVE - Orders Enabled' : '🔒 DISABLED - Orders Blocked';
+        }
+
+        // Load Orders Status on Dashboard Load
+        function loadOrdersStatus() {
+            db.collection('adminSettings').doc('ordersEnabled').get().then(doc => {
+                if (doc.exists) {
+                    updateOrdersStatusUI(doc.data().enabled);
+                } else {
+                    // Default to enabled
+                    updateOrdersStatusUI(true);
+                    db.collection('adminSettings').doc('ordersEnabled').set({ enabled: true });
+                }
+            }).catch(error => {
+                console.error('Error loading orders status:', error);
+                updateOrdersStatusUI(true);
+            });
         }
 
         // Delete Order
