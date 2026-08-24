@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -141,6 +139,9 @@
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+
     <script>
         // ✅ IMPORTANT - API KEY IS NOT HERE!
         // It comes from Vercel environment variables via /api/config
@@ -166,14 +167,28 @@
             } catch (error) {
                 console.error("❌ Error loading config:", error);
                 document.getElementById('loadingMessage').innerHTML = 
-                    '<div class="error-message"><strong>❌ Error:</strong> Could not load Firebase configuration. Please contact admin.</div>';
+                    '<div class="error-message"><strong>❌ Error:</strong> ' + error.message + '</div>';
             }
         }
 
         function initializeFirebase() {
             try {
+                // Wait for Firebase to be available
+                if (typeof firebase === 'undefined') {
+                    console.error("❌ Firebase not loaded yet");
+                    setTimeout(initializeFirebase, 500);
+                    return;
+                }
+
                 console.log("🔧 Initializing Firebase with config...");
-                firebase.initializeApp(firebaseConfig);
+                
+                // Check if already initialized
+                if (firebase.apps && firebase.apps.length > 0) {
+                    console.log("✅ Firebase already initialized");
+                } else {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
                 const db = firebase.firestore();
                 
                 console.log("✅ Firebase initialized successfully");
