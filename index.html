@@ -51,20 +51,52 @@
             font-size: 16px;
             margin-top: 20px;
         }
+        .debug {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🥇 Gold Booking System</h1>
         <div id="status" class="loading">Loading Firebase...</div>
+        <div id="debug" class="debug"></div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/storage.js"></script>
+    <!-- Try multiple Firebase CDN sources -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js" onerror="logError('CDN 1 failed')"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js" onerror="logError('CDN 2 failed')"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js" onerror="logError('CDN 3 failed')"></script>
 
     <script>
-        console.log("Script started");
+        const debugLog = [];
+        
+        function log(msg) {
+            console.log(msg);
+            debugLog.push(msg);
+            updateDebug();
+        }
+        
+        function logError(msg) {
+            console.error(msg);
+            debugLog.push("❌ " + msg);
+            updateDebug();
+        }
+        
+        function updateDebug() {
+            const debugDiv = document.getElementById('debug');
+            debugDiv.innerHTML = debugLog.map(m => m + '<br>').join('');
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+
+        log("Page loaded");
         
         const firebaseConfig = {
             apiKey: "AIzaSyCPjnhrb6IGmmDiDSVkmesO7-dewm_6-aI",
@@ -76,46 +108,53 @@
         };
 
         let retries = 0;
-        const maxRetries = 50;
+        const maxRetries = 100;
 
         function tryInitialize() {
             retries++;
-            console.log(`Attempt ${retries}: Checking for firebase...`);
+            
+            if (retries % 10 === 0) {
+                log(`Waiting for Firebase... (${retries}ms)`);
+            }
             
             if (typeof firebase !== 'undefined') {
-                console.log("✅ Firebase object found!");
+                log("✅ Firebase object found!");
                 initFirebase();
             } else if (retries < maxRetries) {
-                console.log(`Firebase not ready yet, waiting...`);
                 setTimeout(tryInitialize, 100);
             } else {
-                console.error("❌ Firebase failed to load after retries");
-                document.getElementById('status').innerHTML = '<div class="error">❌ Failed to load Firebase</div>';
+                logError("Firebase failed to load after 10 seconds");
+                document.getElementById('status').innerHTML = '<div class="error">❌ Firebase CDN not responding. Check your internet connection.</div>';
             }
         }
 
         function initFirebase() {
             try {
-                console.log("Initializing Firebase...");
-                firebase.initializeApp(firebaseConfig);
-                console.log("✅ Firebase initialized");
+                log("Initializing Firebase...");
+                
+                if (firebase.apps.length === 0) {
+                    firebase.initializeApp(firebaseConfig);
+                    log("✅ Firebase app initialized");
+                } else {
+                    log("✅ Firebase already initialized");
+                }
                 
                 const db = firebase.firestore();
-                console.log("✅ Firestore ready");
+                log("✅ Firestore ready");
                 
                 const storage = firebase.storage();
-                console.log("✅ Storage ready");
+                log("✅ Storage ready");
                 
                 document.getElementById('status').innerHTML = '<div class="success">✅ System Connected Successfully!</div>';
-                console.log("✅✅✅ ALL SYSTEMS GO ✅✅✅");
+                log("✅✅✅ ALL SYSTEMS GO ✅✅✅");
                 
             } catch (error) {
-                console.error("Error:", error);
+                logError("Error: " + error.message);
                 document.getElementById('status').innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
             }
         }
 
-        // Start checking for Firebase
+        log("Starting Firebase check...");
         tryInitialize();
     </script>
 </body>
