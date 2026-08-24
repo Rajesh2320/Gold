@@ -518,15 +518,31 @@
 
             db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
                 allOrders = [];
+                console.log("📊 Firestore snapshot received, total docs:", snapshot.size);
+                
                 snapshot.forEach(doc => {
                     const order = doc.data();
                     order.firebaseDocId = doc.id;
                     allOrders.push(order);
+                    
+                    console.log("📋 Order loaded:", {
+                        orderId: order.orderId,
+                        customerName: order.customerName,
+                        status: order.status,
+                        createdAt: order.createdAt,
+                        timestamp: order.timestamp,
+                        totalAmount: order.totalAmount
+                    });
                 });
                 
-                console.log("✅ Loaded", allOrders.length, "orders");
+                console.log("✅ Loaded", allOrders.length, "orders total");
+                console.log("All orders array:", allOrders);
+                
                 displayOrders(allOrders);
                 updateAnalytics();
+            }, (error) => {
+                console.error("❌ Error loading orders:", error.message);
+                document.getElementById('loadingMessage').textContent = `Error: ${error.message}`;
             });
         }
 
