@@ -672,10 +672,67 @@
                 console.log("📸 Setting up file preview...");
                 setupProofFilePreview();
                 
+                console.log("🔐 Checking if orders are enabled...");
+                checkOrdersStatus();
+                
                 console.log("✅ App initialized!");
             } catch(error) {
                 console.error("❌ Init error:", error);
             }
+        }
+
+        // Check if orders are enabled/disabled
+        function checkOrdersStatus() {
+            db.collection('adminSettings').doc('ordersEnabled').get().then(doc => {
+                if (doc.exists && !doc.data().enabled) {
+                    // Orders disabled
+                    console.log("🔒 Orders are disabled by admin");
+                    showOrdersDisabledMessage();
+                } else {
+                    // Orders enabled (default)
+                    console.log("✅ Orders are enabled");
+                    document.getElementById('orderForm').style.display = 'block';
+                }
+            }).catch(error => {
+                console.log("Orders status check error:", error);
+                // Default to enabled if error
+                document.getElementById('orderForm').style.display = 'block';
+            });
+        }
+
+        // Show orders disabled message
+        function showOrdersDisabledMessage() {
+            document.getElementById('orderForm').innerHTML = `
+                <div style="text-align: center; padding: 60px 20px; background: #f8d7da; border-radius: 8px; border: 2px solid #dc3545;">
+                    <h2 style="color: #dc3545; margin-bottom: 15px;">🔒 Orders Temporarily Closed</h2>
+                    <p style="font-size: 16px; color: #721c24; margin-bottom: 10px; font-weight: 500;">
+                        Admin has restricted access to the site.
+                    </p>
+                    <p style="font-size: 14px; color: #721c24;">
+                        Regret the inconvenience, please try after some time.
+                    </p>
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dc3545;">
+                        <button onclick="location.reload()" style="padding: 10px 30px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                            Refresh Page
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('paymentSection').style.display = 'none';
+        }
+
+        // Listen for real-time orders status changes
+        function listenToOrdersStatus() {
+            db.collection('adminSettings').doc('ordersEnabled').onSnapshot(doc => {
+                if (doc.exists && !doc.data().enabled) {
+                    showOrdersDisabledMessage();
+                } else {
+                    if (document.getElementById('orderForm').innerHTML.includes('Orders Temporarily Closed')) {
+                        // Reload if was disabled before
+                        location.reload();
+                    }
+                }
+            });
         }
 
         // Initialize when DOM is ready
@@ -692,6 +749,8 @@
             if (!firebaseReady) {
                 console.log("⏳ Firebase still initializing...");
             }
+            // Start listening to orders status changes
+            listenToOrdersStatus();
         });
 
         function renderProducts() {
