@@ -33,6 +33,8 @@
             border-radius: 6px;
             text-align: center;
             margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
         }
         .error {
             background: #f8d7da;
@@ -41,21 +43,25 @@
             border-radius: 6px;
             text-align: center;
             margin-top: 20px;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🥇 Gold Booking System</h1>
-        <div id="status"></div>
+        <div id="status">Loading...</div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js"></script>
+    <!-- Firebase Compat version - works with regular script tags -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-compat/storage.js"></script>
 
     <script>
-        // Replace with your NEW API key
+        console.log("Page loaded, starting Firebase...");
+        
+        // YOUR NEW API KEY - REPLACE THIS
         const firebaseConfig = {
             apiKey: "AIzaSyCPjnhrb6IGmmDiDSVkmesO7-dewm_6-aI",
             authDomain: "gold-orders.firebaseapp.com",
@@ -66,13 +72,21 @@
         };
 
         try {
-            console.log("Starting Firebase initialization...");
+            console.log("Initializing Firebase...");
             firebase.initializeApp(firebaseConfig);
+            console.log("✅ Firebase app initialized");
+            
             const db = firebase.firestore();
-            console.log("✅ Firebase initialized successfully!");
+            console.log("✅ Firestore connected");
+            
+            const storage = firebase.storage();
+            console.log("✅ Storage connected");
+            
             document.getElementById('status').innerHTML = '<div class="success">✅ System Connected Successfully!</div>';
+            console.log("✅✅✅ ALL SYSTEMS READY ✅✅✅");
+            
         } catch (error) {
-            console.error("Error:", error);
+            console.error("❌ Error:", error.message);
             document.getElementById('status').innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
         }
     </script>
