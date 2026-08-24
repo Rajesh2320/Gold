@@ -958,8 +958,8 @@
                         
                         console.log("📋 Order found:", order.orderId, "Date:", orderDate, "Status:", order.status, "Weight:", order.totalWeight, "kg");
                         
-                        // Count PAID orders only (status: Pending, Completed, Paid, or Proof Submitted)
-                        const paidStatuses = ['Pending', 'Completed', 'Paid', 'Proof Submitted'];
+                        // Count PAID orders only (status: Pending, Completed, or Paid) - NOT Proof Submitted
+                        const paidStatuses = ['Pending', 'Completed', 'Paid'];
                         if (orderDate === today && paidStatuses.includes(order.status)) {
                             const weightKg = parseFloat(order.totalWeight || order.totalKg || 0);
                             totalGramsOrdered += weightKg * 1000; // Convert kg to grams
@@ -1098,8 +1098,20 @@
         function showPaymentSectionWithOrder(orderId) {
             console.log("🎯 Showing payment section for Order:", orderId);
             
-            // Hide order form and show payment section
+            // Reset and hide order form completely
+            document.getElementById('orderForm').reset();
             document.getElementById('orderForm').style.display = 'none';
+            
+            // Clear cart
+            cart = {};
+            renderProducts();
+            updateCart();
+            
+            // Clear search section
+            document.getElementById('searchOrderId').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+            
+            // Show payment section
             document.getElementById('paymentSection').style.display = 'block';
             
             const amountString = document.getElementById('finalAmount').textContent;
@@ -1107,6 +1119,9 @@
             
             document.getElementById('payOrderId').textContent = orderId;
             document.getElementById('payAmount').textContent = amountString;
+            
+            // Clear proof file input
+            document.getElementById('proofFile').value = '';
             
             // Generate QR Code with amount as number
             generatePaymentQRCode(orderId, amountNumber);
@@ -1249,13 +1264,73 @@
 
         function displayOrderDetails(order) {
             const resultsDiv = document.getElementById('searchResults');
+            
+            // Parse amount
+            let amount = order.totalAmount;
+            if (typeof amount === 'string') {
+                amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
+            }
+            
+            let statusColor = '#4caf50';
+            let statusEmoji = '✅';
+            
+            if (order.status === 'Paid') {
+                statusColor = '#4caf50';
+                statusEmoji = '✅';
+            } else if (order.status === 'Pending Payment') {
+                statusColor = '#ff9800';
+                statusEmoji = '⏳';
+            } else if (order.status === 'Proof Submitted') {
+                statusColor = '#2196F3';
+                statusEmoji = '📷';
+            } else if (order.status === 'Completed') {
+                statusColor = '#4caf50';
+                statusEmoji = '✅';
+            } else if (order.status === 'Cancelled') {
+                statusColor = '#f44336';
+                statusEmoji = '❌';
+            }
+            
+            // Show payment option only if not paid and not cancelled
+            const isPaid = order.status === 'Paid' || order.status === 'Completed';
+            const isCancelled = order.status === 'Cancelled';
+            
+            let paymentHTML = '';
+            let qrCodeUrl = '';
+            
+            if (!isPaid && !isCancelled) {
+                // Generate QR code URL
+                const upiString = `upi://pay?pa=7827850404@upi&pn=Gold Shop&am=${amount}&tn=Order ${order.orderId}`;
+                const encodedUPI = encodeURIComponent(upiString);
+                qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedUPI}`;
+                
+                paymentHTML = `
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #ff9800;">
+                        <h4 style="color: #ff9800; margin: 0 0 10px 0;">⏳ Payment Required</h4>
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <img src="${qrCodeUrl}" alt="Payment QR Code" style="max-width: 150px; border: 2px solid #ff9800; border-radius: 4px;">
+                        </div>
+                        <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">Use this UPI ID to pay ₹${amount.toLocaleString()}:</p>
+                        <p style="margin: 0 0 10px 0; font-family: monospace; background: white; padding: 8px; border-radius: 4px; font-weight: bold;">7827850404@upi</p>
+                        <button onclick="openUPIApp('${amount}')" style="background: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600; margin-right: 10px;">💳 Pay via UPI</button>
+                        <button onclick="copyToClipboard('7827850404@upi')" style="background: #667eea; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600;">📋 Copy UPI ID</button>
+                    </div>
+                `;
+            }
+            
             resultsDiv.innerHTML = `
-                <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50;">
-                    <h3 style="color: #4caf50; margin-bottom: 15px;">✅ Order Found!</h3>
-                    <p><strong>Order ID:</strong> ${order.orderId}</p>
-                    <p><strong>Customer:</strong> ${order.customerName}</p>
-                    <p><strong>Amount:</strong> ${order.totalAmount}</p>
-                    <p><strong>Status:</strong> ${order.status || 'Pending'}</p>
+                <div style="background: ${statusColor}20; padding: 20px; border-radius: 8px; border-left: 4px solid ${statusColor};">
+                    <h3 style="color: ${statusColor}; margin: 0 0 15px 0;">${statusEmoji} Order Found!</h3>
+                    <p style="margin: 5px 0;"><strong>Order ID:</strong> ${order.orderId}</p>
+                    <p style="margin: 5px 0;"><strong>Customer:</strong> ${order.customerName}</p>
+                    <p style="margin: 5px 0;"><strong>Email:</strong> ${order.customerEmail}</p>
+                    <p style="margin: 5px 0;"><strong>Phone:</strong> ${order.customerPhone}</p>
+                    <p style="margin: 5px 0;"><strong>Amount:</strong> ₹${amount.toLocaleString()}</p>
+                    <p style="margin: 5px 0;"><strong>Total KG:</strong> ${order.totalWeight || order.totalKg}kg</p>
+                    <p style="margin: 5px 0;"><strong>Delivery Type:</strong> ${order.deliveryType === 'delivery' ? '🚚 Delivery' : '🏪 Pickup'}</p>
+                    <p style="margin: 5px 0;"><strong>Status:</strong> <span style="display: inline-block; background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${order.status || 'Pending'}</span></p>
+                    <p style="margin: 5px 0;"><strong>Date:</strong> ${order.timestamp || order.createdAt}</p>
+                    ${paymentHTML}
                 </div>
             `;
         }
@@ -1272,6 +1347,19 @@
             successDiv.textContent = message;
             successDiv.style.display = 'block';
             setTimeout(() => successDiv.style.display = 'none', 5000);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showSuccess('✅ UPI ID copied to clipboard!');
+            }).catch(err => {
+                showError('Failed to copy: ' + err);
+            });
+        }
+
+        function openUPIApp(amount) {
+            const upiString = `upi://pay?pa=7827850404@upi&pn=Gold Shop&am=${amount}&tn=Payment`;
+            window.location.href = upiString;
         }
     </script>
 </body>
