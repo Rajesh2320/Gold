@@ -276,14 +276,34 @@
             color: #856404;
         }
 
+        .status-proof-submitted {
+            background: #d1e7ff;
+            color: #0c5460;
+        }
+
         .status-pending {
             background: #d1ecf1;
             color: #0c5460;
         }
 
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+
         .status-completed {
             background: #d4edda;
             color: #155724;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-dispute {
+            background: #ffe5cc;
+            color: #cc5200;
         }
 
         .proof-modal-content {
@@ -592,6 +612,7 @@
                     <select id="statusFilter" onchange="filterTable()">
                         <option value="">All Status</option>
                         <option value="Pending Payment">Pending Payment</option>
+                        <option value="Proof Submitted">Proof Submitted</option>
                         <option value="Paid">Paid</option>
                         <option value="Completed">Completed</option>
                         <option value="Cancelled">Cancelled</option>
@@ -791,6 +812,20 @@
                 const kgs = order.totalWeight || order.totalKg || 0;
                 const deliveryType = order.deliveryType === 'delivery' ? '🚚 Delivery' : '🏪 Pickup';
                 
+                // Build action buttons
+                let actionButtons = `
+                    <button class="btn btn-edit" onclick="updateOrderStatus('${order.firebaseDocId}', '${order.orderId}')" style="padding: 4px 8px; font-size: 11px;">Status</button>
+                    <button class="btn" onclick="sendWhatsApp('${order.customerPhone}', '${order.orderId}')" style="background: #25D366; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">WhatsApp</button>
+                    <button class="btn" onclick="sendEmail('${order.customerEmail}', '${order.orderId}')" style="background: #EA4335; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">Email</button>
+                `;
+                
+                // Add View Proof button if proof exists
+                if (order.proofImage) {
+                    actionButtons += `<button class="btn" onclick="viewProof('${order.orderId}', '${order.customerName}', '${order.totalAmount}', '${order.proofImage.replace(/'/g, "\\'")}')" style="background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">📷 Proof</button>`;
+                }
+                
+                actionButtons += `<button class="btn btn-delete" onclick="deleteOrder('${order.firebaseDocId}')" style="padding: 4px 8px; font-size: 11px;">Delete</button>`;
+                
                 row.innerHTML = `
                     <td>${order.orderId}</td>
                     <td>${order.customerName}</td>
@@ -802,10 +837,7 @@
                     <td><span class="status-badge ${statusClass}">${order.status}</span></td>
                     <td>${order.timestamp || order.createdAt}</td>
                     <td style="display: flex; gap: 4px; flex-wrap: wrap;">
-                        <button class="btn btn-edit" onclick="updateOrderStatus('${order.firebaseDocId}', '${order.orderId}')" style="padding: 4px 8px; font-size: 11px;">Status</button>
-                        <button class="btn" onclick="sendWhatsApp('${order.customerPhone}', '${order.orderId}')" style="background: #25D366; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">WhatsApp</button>
-                        <button class="btn" onclick="sendEmail('${order.customerEmail}', '${order.orderId}')" style="background: #EA4335; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">Email</button>
-                        <button class="btn btn-delete" onclick="deleteOrder('${order.firebaseDocId}')" style="padding: 4px 8px; font-size: 11px;">Delete</button>
+                        ${actionButtons}
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -877,7 +909,7 @@
                     totalRevenue += amount;
                 }
                 
-                // Outstanding amount
+                // Outstanding amount (only truly unpaid orders)
                 if (order.status === 'Pending Payment') {
                     outstandingAmount += amount;
                 }
@@ -907,8 +939,9 @@
                     customerRevenue[phone].kgs += kgs;
                 }
                 
-                // Status breakdown
+                // Status breakdown (Proof Submitted is treated as verified payment)
                 if (order.status === 'Paid') paidCount++;
+                else if (order.status === 'Proof Submitted') paidCount++; // Count as paid
                 else if (order.status === 'Completed') completedCount++;
                 else if (order.status === 'Cancelled') cancelledCount++;
                 else if (order.status === 'Dispute') disputeCount++;
@@ -1344,7 +1377,14 @@
             window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
         }
 
-        // Toggle Orders Status
+        // View Payment Proof
+        function viewProof(orderId, customerName, amount, proofImage) {
+            document.getElementById('proofOrderId').textContent = orderId;
+            document.getElementById('proofCustomer').textContent = customerName;
+            document.getElementById('proofAmount').textContent = '₹' + amount.toLocaleString();
+            document.getElementById('proofImage').src = proofImage;
+            document.getElementById('proofModal').classList.add('active');
+        }
         async function toggleOrdersStatus() {
             const checkbox = document.getElementById('ordersToggle');
             const newStatus = checkbox.checked;
