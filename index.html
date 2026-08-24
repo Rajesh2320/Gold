@@ -958,8 +958,9 @@
                         
                         console.log("📋 Order found:", order.orderId, "Date:", orderDate, "Status:", order.status, "Weight:", order.totalWeight, "kg");
                         
-                        // Count PAID orders only (status: Pending or Completed)
-                        if (orderDate === today && (order.status === 'Pending' || order.status === 'Completed')) {
+                        // Count PAID orders only (status: Pending, Completed, Paid, or Proof Submitted)
+                        const paidStatuses = ['Pending', 'Completed', 'Paid', 'Proof Submitted'];
+                        if (orderDate === today && paidStatuses.includes(order.status)) {
                             const weightKg = parseFloat(order.totalWeight || order.totalKg || 0);
                             totalGramsOrdered += weightKg * 1000; // Convert kg to grams
                             ordersCount++;
@@ -1097,6 +1098,8 @@
         function showPaymentSectionWithOrder(orderId) {
             console.log("🎯 Showing payment section for Order:", orderId);
             
+            // Hide order form and show payment section
+            document.getElementById('orderForm').style.display = 'none';
             document.getElementById('paymentSection').style.display = 'block';
             
             const amountString = document.getElementById('finalAmount').textContent;
@@ -1146,9 +1149,53 @@
                 return;
             }
 
-            // This will be handled by Cloud Function after setup
-            showSuccess('✅ Order Confirmed! Payment proof uploaded successfully.');
-            goBackFromPayment();
+            // Show loading state
+            const uploadBtn = event.target;
+            const originalText = uploadBtn.textContent;
+            uploadBtn.textContent = '⏳ Uploading...';
+            uploadBtn.disabled = true;
+
+            // Read file as base64
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Proof = e.target.result;
+                const orderId = document.getElementById('payOrderId').textContent;
+
+                // Update order in Firestore with proof
+                if (window.currentOrderDocId) {
+                    db.collection('orders').doc(window.currentOrderDocId).update({
+                        status: 'Proof Submitted',
+                        proofImage: base64Proof,
+                        proofSubmittedAt: new Date().toISOString(),
+                        proofFileName: proofFile.name
+                    }).then(() => {
+                        console.log("✅ Proof uploaded successfully for order:", orderId);
+                        showSuccess('✅ Payment proof submitted successfully! Admin will verify and confirm your order.');
+                        
+                        // Reset after 2 seconds
+                        setTimeout(() => {
+                            goBackFromPayment();
+                        }, 2000);
+                    }).catch(error => {
+                        console.error("❌ Error uploading proof:", error);
+                        showError('Error uploading proof: ' + error.message);
+                        uploadBtn.textContent = originalText;
+                        uploadBtn.disabled = false;
+                    });
+                } else {
+                    showError('Order ID not found. Please try again.');
+                    uploadBtn.textContent = originalText;
+                    uploadBtn.disabled = false;
+                }
+            };
+
+            reader.onerror = function() {
+                showError('Error reading file. Please try again.');
+                uploadBtn.textContent = originalText;
+                uploadBtn.disabled = false;
+            };
+
+            reader.readAsDataURL(proofFile);
         }
 
         function goBackFromPayment() {
