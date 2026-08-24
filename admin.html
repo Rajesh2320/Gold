@@ -24,6 +24,17 @@
             margin-bottom: 30px;
             text-align: center;
         }
+        .status-message {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .success-msg {
+            background: #d4edda;
+            color: #155724;
+        }
         .login-form {
             max-width: 400px;
             margin: 50px auto;
@@ -73,30 +84,15 @@
             background: #dc3545 !important;
             margin-top: 20px;
         }
-        .status-message {
-            text-align: center;
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 6px;
-            font-weight: bold;
-        }
-        .debug {
-            background: #f0f0f0;
-            padding: 15px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 12px;
-            margin-top: 20px;
-            max-height: 150px;
-            overflow-y: auto;
+        .logout-btn:hover {
+            background: #c82333 !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔐 Admin Dashboard</h1>
-        <div id="firebaseStatus" class="status-message" style="background: #fff3cd; color: #856404;">Loading Firebase...</div>
-        <div id="debug" class="debug"></div>
+        <div id="firebaseStatus" class="status-message">Loading Firebase...</div>
 
         <div id="loginSection">
             <div class="login-form">
@@ -113,32 +109,11 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js" onerror="logError('CDN 1 failed')"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js" onerror="logError('CDN 2 failed')"></script>
+    <!-- Firebase UMD version from jsDelivr - works with script tags -->
+    <script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-firestore.js"></script>
 
     <script>
-        const debugLog = [];
-        
-        function log(msg) {
-            console.log(msg);
-            debugLog.push(msg);
-            updateDebug();
-        }
-        
-        function logError(msg) {
-            console.error(msg);
-            debugLog.push("❌ " + msg);
-            updateDebug();
-        }
-        
-        function updateDebug() {
-            const debugDiv = document.getElementById('debug');
-            debugDiv.innerHTML = debugLog.map(m => m + '<br>').join('');
-            debugDiv.scrollTop = debugDiv.scrollHeight;
-        }
-
-        log("Admin page loaded");
-        
         const firebaseConfig = {
             apiKey: "AIzaSyCPjnhrb6IGmmDiDSVkmesO7-dewm_6-aI",
             authDomain: "gold-orders.firebaseapp.com",
@@ -148,62 +123,31 @@
             appId: "1:889006387701:web:c567caa1ec22f95697b0bc"
         };
 
-        let retries = 0;
-        const maxRetries = 100;
-
-        function tryInitialize() {
-            retries++;
-            
-            if (retries % 10 === 0) {
-                log(`Waiting for Firebase... (${retries}ms)`);
-            }
-            
-            if (typeof firebase !== 'undefined') {
-                log("✅ Firebase object found!");
-                initFirebase();
-            } else if (retries < maxRetries) {
-                setTimeout(tryInitialize, 100);
-            } else {
-                logError("Firebase failed to load after 10 seconds");
-                document.getElementById('firebaseStatus').innerHTML = '❌ Firebase CDN not responding';
-                document.getElementById('firebaseStatus').style.background = '#f8d7da';
-                document.getElementById('firebaseStatus').style.color = '#721c24';
-            }
-        }
-
-        function initFirebase() {
+        setTimeout(() => {
             try {
-                log("Initializing Firebase...");
-                
-                if (firebase.apps.length === 0) {
-                    firebase.initializeApp(firebaseConfig);
-                    log("✅ Firebase app initialized");
-                } else {
-                    log("✅ Firebase already initialized");
-                }
+                console.log("Initializing Firebase...");
+                firebase.initializeApp(firebaseConfig);
+                console.log("✅ Firebase initialized");
                 
                 const db = firebase.firestore();
-                log("✅ Firestore ready");
+                console.log("✅ Firestore ready");
                 
                 document.getElementById('firebaseStatus').innerHTML = '✅ Firebase Connected';
-                document.getElementById('firebaseStatus').style.background = '#d4edda';
-                document.getElementById('firebaseStatus').style.color = '#155724';
-                log("✅ Admin panel ready!");
+                document.getElementById('firebaseStatus').classList.add('success-msg');
+                console.log("✅ Admin panel ready!");
                 
             } catch (error) {
-                logError("Error: " + error.message);
+                console.error("Error:", error);
                 document.getElementById('firebaseStatus').innerHTML = '❌ Error: ' + error.message;
-                document.getElementById('firebaseStatus').style.background = '#f8d7da';
-                document.getElementById('firebaseStatus').style.color = '#721c24';
             }
-        }
+        }, 1000);
 
         function adminLogin() {
             const password = document.getElementById('adminPassword').value;
             if (password === 'admin123') {
                 document.getElementById('loginSection').style.display = 'none';
                 document.getElementById('adminPanel').style.display = 'block';
-                log("✅ Admin logged in");
+                console.log("✅ Admin logged in");
             } else {
                 alert("❌ Wrong password!");
                 document.getElementById('adminPassword').value = '';
@@ -214,11 +158,8 @@
             document.getElementById('adminPanel').style.display = 'none';
             document.getElementById('loginSection').style.display = 'block';
             document.getElementById('adminPassword').value = '';
-            log("👋 Admin logged out");
+            console.log("👋 Admin logged out");
         }
-
-        log("Starting Firebase check...");
-        tryInitialize();
     </script>
 </body>
 </html>
