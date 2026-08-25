@@ -279,6 +279,14 @@
             border-color: #c5a028;
         }
 
+        .field-error {
+            margin-top: 5px;
+            font-size: 13px;
+            color: #dc3545;
+            display: none;
+            font-weight: 500;
+        }
+
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -643,7 +651,7 @@
                 console.log("🌍 Auth Domain:", firebaseConfig.authDomain);
                 
                 // Test connection
-                db.collection('orders').limit(1).get().then(() => {
+                db.collection('goldOrders').limit(1).get().then(() => {
                     console.log("✅ Connected to Firestore!");
                 }).catch(error => {
                     console.log("⚠️ Firestore connection test:", error.message);
@@ -692,9 +700,116 @@
                 console.log("🔐 Checking if orders are enabled...");
                 checkOrdersStatus();
                 
+                console.log("✅ Setting up form validators...");
+                setupFormValidators();
+                
                 console.log("✅ App initialized!");
             } catch(error) {
                 console.error("❌ Init error:", error);
+            }
+        }
+
+        // Setup form field validators
+        function setupFormValidators() {
+            // Email validation
+            document.getElementById('customerEmail').addEventListener('blur', function() {
+                const email = this.value;
+                if (email && !validateEmail(email)) {
+                    showFieldError(this, '❌ Invalid email format');
+                } else {
+                    clearFieldError(this);
+                }
+            });
+
+            document.getElementById('customerEmail').addEventListener('input', function() {
+                const email = this.value;
+                if (email && validateEmail(email)) {
+                    clearFieldError(this);
+                }
+            });
+
+            // Phone number validation
+            document.getElementById('customerPhone').addEventListener('blur', function() {
+                const phone = this.value;
+                if (phone && !validatePhoneNumber(phone)) {
+                    showFieldError(this, '❌ Invalid Indian mobile number (10 digits)');
+                } else {
+                    clearFieldError(this);
+                }
+            });
+
+            document.getElementById('customerPhone').addEventListener('input', function() {
+                const phone = this.value;
+                if (phone.length === 10 && validatePhoneNumber(phone)) {
+                    clearFieldError(this);
+                }
+            });
+
+            // PIN code validation
+            document.getElementById('pincode').addEventListener('blur', function() {
+                const pincode = this.value;
+                if (pincode) {
+                    const validation = validatePincode(pincode);
+                    if (!validation.valid) {
+                        showFieldError(this, validation.message);
+                    } else {
+                        clearFieldError(this);
+                        showFieldSuccess(this, validation.message);
+                        updateFinalAmount();
+                    }
+                }
+            });
+
+            document.getElementById('pincode').addEventListener('input', function() {
+                const pincode = this.value;
+                if (pincode.length === 6) {
+                    const validation = validatePincode(pincode);
+                    if (validation.valid) {
+                        clearFieldError(this);
+                        showFieldSuccess(this, validation.message);
+                        updateFinalAmount();
+                    }
+                }
+            });
+        }
+
+        function showFieldError(field, message) {
+            field.style.borderColor = '#dc3545';
+            field.style.backgroundColor = '#fff5f5';
+            
+            // Create or update error message
+            let errorDiv = field.nextElementSibling;
+            if (!errorDiv || !errorDiv.classList.contains('field-error')) {
+                errorDiv = document.createElement('div');
+                errorDiv.className = 'field-error';
+                field.parentNode.insertBefore(errorDiv, field.nextSibling);
+            }
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function showFieldSuccess(field, message) {
+            field.style.borderColor = '#28a745';
+            field.style.backgroundColor = '#f0fdf4';
+            
+            // Create or update success message
+            let successDiv = field.nextElementSibling;
+            if (!successDiv || !successDiv.classList.contains('field-error')) {
+                successDiv = document.createElement('div');
+                successDiv.className = 'field-error';
+                field.parentNode.insertBefore(successDiv, field.nextSibling);
+            }
+            successDiv.textContent = message;
+            successDiv.style.color = '#28a745';
+            successDiv.style.display = 'block';
+        }
+
+        function clearFieldError(field) {
+            field.style.borderColor = '';
+            field.style.backgroundColor = '';
+            let errorDiv = field.nextElementSibling;
+            if (errorDiv && errorDiv.classList.contains('field-error')) {
+                errorDiv.style.display = 'none';
             }
         }
 
@@ -906,10 +1021,172 @@
             document.getElementById('finalAmount').textContent = `₹${finalAmount.toLocaleString()}`;
         }
 
-        function calculateDeliveryCharge(pincode) {
-            // Distance-based logic - can be customized
-            // For now: flat ₹50
-            return 50;
+        // Serviceable PIN codes with delivery charges (Chennai area - 0-25 km MAX)
+        // PIN Code to Distance Mapping - FROM ALANDUR EXCEL FILE
+        // Business Location: Alandur (600016)
+        // FILTERED: 70 PIN codes within 25 km max (GOLD + CAKES unified)
+        const PINCODE_DISTANCE_MAP = {
+            '600016': 1,    // Alandur / St. Thomas Mount
+            '600088': 2,    // Adambakkam
+            '600032': 2.3,  // Guindy / Ekkattuthangal
+            '600089': 4.2,  // Ramapuram
+            '600015': 4.5,  // Saidapet / Raj Bhavan
+            '600061': 4.8,  // Pazhavanthangal / Nanganallur
+            '600083': 5.6,  // Ashok Nagar
+            '600042': 6.5,  // Velachery
+            '600035': 6.7,  // Nandanam
+            '600078': 6.7,  // K.K. Nagar
+            '600091': 7,    // Madipakkam / Puzhuthivakkam
+            '600026': 7,    // Vadapalani
+            '600017': 7.6,  // T. Nagar / Thyagarayanagar
+            '600085': 7.7,  // Kotturpuram
+            '600043': 8,    // Pallavaram
+            '600018': 8,    // Teynampet / Abiramapuram
+            '600024': 8.1,  // Kodambakkam
+            '600020': 8.5,  // Adyar
+            '600087': 9,    // Valasaravakkam / Alwar Thirunagar
+            '600116': 9.1,  // Porur / Alapakkam
+            '600094': 9.2,  // Choolaimedu
+            '600106': 9.2,  // Arumbakkam
+            '600113': 9.4,  // Taramani / IIT Madras
+            '600006': 9.4,  // Greames Road / Thousand Lights
+            '600092': 9.6,  // Virugambakkam
+            '600044': 10,   // Chromepet
+            '600034': 10.2, // Nungambakkam
+            '600028': 10.3, // Raja Annamalaipuram
+            '600090': 10.5, // Besant Nagar
+            '600075': 10.8, // Pammal
+            '600029': 10.9, // Aminjikarai
+            '600070': 11,   // Anakaputhur West / Pozhichalur
+            '600004': 11.4, // Mylapore
+            '600095': 11.5, // Vanagaram/Ayanambakkam
+            '600096': 11.8, // Perungudi
+            '600107': 12.1, // Koyambedu
+            '600100': 12.3, // Medavakkam
+            '600041': 12.7, // Thiruvanmiyur
+            '600097': 13.1, // Karapakkam / OMR
+            '600030': 13.2, // Shenoy Nagar
+            '600064': 13.3, // Chromepet East / Chitlapakkam
+            '600122': 13.4, // Mangadu
+            '600008': 13.5, // Egmore
+            '600010': 13.7, // Kilpauk
+            '600040': 14,   // Anna Nagar
+            '600002': 14.1, // Anna Salai / Chintadripet / Mount Road
+            '600050': 14.4, // Padi
+            '600045': 14.5, // Tambaram
+            '600007': 14.7, // Vepery / Choolai
+            '600056': 15,   // Poonamallee / Iyyappanthangal
+            '600014': 15.1, // Royapettah
+            '600005': 15.7, // Triplicane
+            '600049': 15.7, // Villivakkam
+            '600069': 16.4, // Nandambakkam / Kundrathur
+            '600023': 17.4, // Ayanavaram
+            '600012': 17.4, // Perambur Barracks / Otteri
+            '600073': 17.5, // Selaiyur / East Tambaram
+            '600077': 17.7, // Thiruverkadu
+            '600009': 17.9, // Fort St. George
+            '600003': 18.3, // Park Town / Central Railway Stn
+            '600099': 18.5, // Puthagaram / Lakshmipuram
+            '600063': 18.5, // Perungalathur
+            '600053': 18.7, // Ambattur
+            '600082': 18.8, // Agaram / Jawahar Nagar
+            '600126': 19.5, // Madambakkam
+            '600001': 19.7, // Parrys / Chennai GPO
+            '600130': 20,   // Navalur / OMR
+            '600119': 20.7, // Sholinganallur
+            '600013': 21.7, // Royapuram
+            '600011': 22,   // Perambur
+            '600118': 22,   // Kavangarai / Kodungaiyur
+            '600021': 22.8, // Washermanpet
+            '600048': 22.8, // Vandalur
+            '600039': 24.3, // Vyasarpadi
+            '600081': 24.8, // Tondiarpet
+            '600060': 25,   // Madhavaram (MAX DISTANCE)
+            '600054': 25    // Avadi (MAX DISTANCE)
+        };
+
+        // Email validation
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Indian mobile number validation (10 digits starting with 6-9)
+        function validatePhoneNumber(phone) {
+            const phoneRegex = /^[6-9]\d{9}$/;
+            return phoneRegex.test(phone);
+        }
+
+        // Distance-based delivery charge calculator (UNIFIED for Gold + Cakes)
+        function calculateDeliveryCharge(distance) {
+            // UPDATED Formula:
+            // Distance 0 km         → ₹50 (flat rate)
+            // Distance 1 km         → ₹65
+            // Distance 2 km         → ₹75
+            // Distance >2 to ≤15 km → ₹50 + (₹10 × distance)
+            // Distance >15 to ≤25 km → ₹75 + (₹12 × distance)
+            
+            if (distance === 0) {
+                return 50;
+            } else if (distance === 1) {
+                return 65;
+            } else if (distance === 2) {
+                return 75;
+            } else if (distance <= 15) {
+                return 50 + (10 * distance);
+            } else if (distance <= 25) {
+                return 75 + (12 * distance);
+            } else {
+                return null; // Beyond 25 km: Not serviceable
+            }
+        }
+
+        // PIN code validation and delivery charge calculation (0-25 km MAX)
+        function validatePincode(pincode) {
+            // Check if PIN is 6 digits
+            const pincodeRegex = /^\d{6}$/;
+            if (!pincodeRegex.test(pincode)) {
+                return { valid: false, message: '❌ PIN code must be 6 digits', charge: 0, distance: 0 };
+            }
+            
+            // Check if serviceable
+            if (PINCODE_DISTANCE_MAP[pincode] !== undefined) {
+                const distance = PINCODE_DISTANCE_MAP[pincode];
+                
+                // Check if within 25 km max
+                if (distance > 25) {
+                    return { 
+                        valid: false, 
+                        message: `❌ Delivery limited to 25 km only. Your PIN is ${distance}km away.`, 
+                        charge: 0,
+                        distance: distance
+                    };
+                }
+                
+                const charge = calculateDeliveryCharge(distance);
+                if (charge === null) {
+                    return { 
+                        valid: false, 
+                        message: `❌ Delivery not available beyond 25 km (Your PIN: ${distance}km)`, 
+                        charge: 0,
+                        distance: distance
+                    };
+                }
+                
+                return { 
+                    valid: true, 
+                    message: `✅ Serviceable! (${distance}km) Delivery: ₹${charge}`, 
+                    charge: charge,
+                    distance: distance
+                };
+            } else {
+                return { 
+                    valid: false, 
+                    message: '❌ Sorry, delivery not available for this PIN code', 
+                    charge: 0,
+                    distance: 0
+                };
+            }
         }
 
         function updateDeliveryFields() {
@@ -947,10 +1224,10 @@
             }
 
             try {
-                console.log("🔄 Reading orders to calculate available stock...");
+                console.log("🔄 Reading goldOrders to calculate available stock...");
                 
                 // Real-time listener for stock calculation
-                db.collection('orders').onSnapshot(snapshot => {
+                db.collection('goldOrders').onSnapshot(snapshot => {
                     const today = new Date().toLocaleDateString('en-IN');
                     let totalGramsOrdered = 0;
                     let ordersCount = 0;
@@ -1037,6 +1314,20 @@
                 return;
             }
 
+            // Validate email format
+            const email = document.getElementById('customerEmail').value;
+            if (!validateEmail(email)) {
+                showError('❌ Please enter valid email address (e.g., name@example.com)');
+                return;
+            }
+
+            // Validate phone number (Indian mobile)
+            const phone = document.getElementById('customerPhone').value;
+            if (!validatePhoneNumber(phone)) {
+                showError('❌ Please enter valid Indian mobile number (10 digits starting with 6-9)');
+                return;
+            }
+
             // Validate delivery fields if needed
             if (selectedDeliveryType === 'delivery') {
                 const address = document.getElementById('deliveryAddress').value;
@@ -1046,8 +1337,16 @@
                     showError('Please enter delivery address');
                     return;
                 }
+                
                 if (!pincode || pincode.length !== 6) {
                     showError('Please enter valid 6-digit pincode');
+                    return;
+                }
+
+                // Validate PIN code and check if serviceable
+                const validation = validatePincode(pincode);
+                if (!validation.valid) {
+                    showError('❌ ' + validation.message);
                     return;
                 }
             }
@@ -1089,8 +1388,8 @@
                 return;
             }
 
-            // Add to Firestore and wait for completion
-            db.collection('orders').add(orderData)
+            // Add to Firestore (goldOrders collection) and wait for completion
+            db.collection('goldOrders').add(orderData)
                 .then((docRef) => {
                     console.log("✅ Order successfully saved to Firestore!");
                     console.log("Order ID:", orderId);
@@ -1201,7 +1500,7 @@
 
                 // Update order in Firestore with proof
                 if (window.currentOrderDocId) {
-                    db.collection('orders').doc(window.currentOrderDocId).update({
+                    db.collection('goldOrders').doc(window.currentOrderDocId).update({
                         status: 'Proof Submitted',
                         proofImage: base64Proof,
                         proofSubmittedAt: new Date().toISOString(),
@@ -1275,8 +1574,8 @@
                 return;
             }
 
-            // Fetch order from Firestore
-            db.collection('orders')
+            // Fetch order from Firestore (goldOrders collection)
+            db.collection('goldOrders')
                 .where('orderId', '==', orderId)
                 .limit(1)
                 .get()
