@@ -1428,8 +1428,8 @@
                     window.currentOrderId = orderId;
                     window.currentOrderDocId = docRef.id;
                     
-                    // Now show payment section with the correct order ID
-                    showPaymentSectionWithOrder(orderId);
+                    // Now show payment section with the correct order ID AND amount
+                    showPaymentSectionWithOrder(orderId, amountNumber, amountString);
                 })
                 .catch((error) => {
                     console.error("❌ Firestore save error!");
@@ -1440,8 +1440,8 @@
                 });
         }
 
-        function showPaymentSectionWithOrder(orderId) {
-            console.log("🎯 Showing payment section for Order:", orderId);
+        function showPaymentSectionWithOrder(orderId, amountNumber, amountString) {
+            console.log("🎯 Showing payment section for Order:", orderId, "Amount:", amountString);
             
             // Reset and hide order form completely
             document.getElementById('orderForm').reset();
@@ -1461,9 +1461,7 @@
             paymentSection.style.display = 'block';
             paymentSection.classList.add('active');
             
-            const amountString = document.getElementById('finalAmount').textContent;
-            const amountNumber = parseInt(amountString.replace('₹', '').replace(/,/g, '')) || 0;
-            
+            // Use the passed amount instead of trying to get from DOM
             document.getElementById('payOrderId').textContent = orderId;
             document.getElementById('payAmount').textContent = amountString;
             
