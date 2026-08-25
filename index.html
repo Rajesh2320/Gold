@@ -1486,6 +1486,13 @@
             // Clear proof file input
             document.getElementById('proofFile').value = '';
             
+            // SIMPLE FIX: Reset upload button text and state
+            const uploadBtn = document.querySelector('button[onclick="uploadPaymentProof()"]');
+            if (uploadBtn) {
+                uploadBtn.textContent = '✅ Upload & Submit Proof';
+                uploadBtn.disabled = false;
+            }
+            
             // SIMPLE FIX: Clear old QR image and preview before generating new one
             document.getElementById('qrCode').src = '';
             const previewContainer = document.getElementById('previewContainer');
@@ -1663,6 +1670,13 @@
             // Clear search section
             document.getElementById('searchOrderId').value = '';
             document.getElementById('searchResults').innerHTML = '';
+            
+            // CRITICAL FIX: Reset upload button text and state
+            const uploadBtn = document.querySelector('button[onclick="uploadPaymentProof()"]');
+            if (uploadBtn) {
+                uploadBtn.textContent = '✅ Upload & Submit Proof';
+                uploadBtn.disabled = false;
+            }
             
             // Scroll to top
             document.getElementById('orderForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
