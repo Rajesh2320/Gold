@@ -1417,8 +1417,8 @@
                 return;
             }
 
-            // Add to Firestore (goldOrders collection) and wait for completion
-            db.collection('goldOrders').add(orderData)
+            // Add to Firestore (orders collection) and wait for completion
+            db.collection('orders').add(orderData)
                 .then((docRef) => {
                     console.log("✅ Order successfully saved to Firestore!");
                     console.log("Order ID:", orderId);
@@ -1529,7 +1529,7 @@
 
                 // Update order in Firestore with proof
                 if (window.currentOrderDocId) {
-                    db.collection('goldOrders').doc(window.currentOrderDocId).update({
+                    db.collection('orders').doc(window.currentOrderDocId).update({
                         status: 'Proof Submitted',
                         proofImage: base64Proof,
                         proofSubmittedAt: new Date().toISOString(),
@@ -1603,8 +1603,8 @@
                 return;
             }
 
-            // Fetch order from Firestore (goldOrders collection)
-            db.collection('goldOrders')
+            // Fetch order from Firestore (orders collection)
+            db.collection('orders')
                 .where('orderId', '==', orderId)
                 .limit(1)
                 .get()
