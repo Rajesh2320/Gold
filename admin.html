@@ -1053,7 +1053,7 @@
             peakHoursBody.innerHTML = '';
             Object.entries(hourlyOrders).forEach(([hour, data]) => {
                 if (data.count > 0) {
-                    const hourLabel = hour < 12 ? hour + ' AM' : (hour === 12 ? '12 PM' : (hour - 12) + ' PM');
+                    const hourLabel = hour === 0 ? '12 AM' : (hour < 12 ? hour + ' AM' : (hour === 12 ? '12 PM' : (hour - 12) + ' PM'));
                     const barLength = (data.count / 10) * 100;
                     const row = document.createElement('tr');
                     row.innerHTML = `
