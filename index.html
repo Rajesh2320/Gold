@@ -560,6 +560,10 @@
         <div class="payment-section" id="paymentSection">
             <div class="section-title">💳 Payment Required</div>
             
+            <!-- Error and Success Messages for Payment Section -->
+            <div id="paymentErrorMessage" class="error-message"></div>
+            <div id="paymentSuccessMessage" class="success-message"></div>
+            
             <div class="payment-header">
                 <p>Order ID: <span id="payOrderId" style="color: #c5a028;"></span></p>
                 <p style="font-size: 20px; color: #28a745;">Amount: <span id="payAmount"></span></p>
@@ -1407,7 +1411,13 @@
                 pincode: document.getElementById('pincode').value,
                 status: 'Pending Payment',
                 createdAt: now.toISOString(),
-                timestamp: timestamp // Format: "dd/mm/yyyy, hh:mm:ss"
+                timestamp: timestamp, // Format: "dd/mm/yyyy, hh:mm:ss"
+                // CRITICAL: Store product breakdown for accurate analytics
+                cartBreakdown: {
+                    '250g': cart[1] || 0,  // Product ID 1 = 250g
+                    '500g': cart[2] || 0,  // Product ID 2 = 500g
+                    '1kg': cart[3] || 0    // Product ID 3 = 1kg
+                }
             };
 
             console.log("💾 Attempting to save order to Firestore...");
@@ -1510,8 +1520,10 @@
 
         function uploadPaymentProof() {
             const proofFile = document.getElementById('proofFile').files[0];
+            
+            // CRITICAL: Check if file is selected first
             if (!proofFile) {
-                showError('Please select a payment proof file');
+                showPaymentError('❌ Please upload payment proof first');
                 return;
             }
 
@@ -1536,7 +1548,7 @@
                         proofFileName: proofFile.name
                     }).then(() => {
                         console.log("✅ Proof uploaded successfully for order:", orderId);
-                        showSuccess('✅ Thanks for uploading the payment proof! The same has been uploaded and stored successfully. Admin will verify the same and will let you know further actions.');
+                        showPaymentSuccess('✅ Thanks for uploading the payment proof! The same has been uploaded and stored successfully. Admin will verify the same and will let you know further actions.');
                         
                         // Reset after 3 seconds
                         setTimeout(() => {
@@ -1544,19 +1556,19 @@
                         }, 3000);
                     }).catch(error => {
                         console.error("❌ Error uploading proof:", error);
-                        showError('Error uploading proof: ' + error.message);
+                        showPaymentError('❌ Error uploading proof: ' + error.message);
                         uploadBtn.textContent = originalText;
                         uploadBtn.disabled = false;
                     });
                 } else {
-                    showError('Order ID not found. Please try again.');
+                    showPaymentError('❌ Order ID not found. Please try again.');
                     uploadBtn.textContent = originalText;
                     uploadBtn.disabled = false;
                 }
             };
 
             reader.onerror = function() {
-                showError('Error reading file. Please try again.');
+                showPaymentError('❌ Error reading file. Please try again.');
                 uploadBtn.textContent = originalText;
                 uploadBtn.disabled = false;
             };
@@ -1936,6 +1948,20 @@
 
         function showSuccess(message) {
             const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 5000);
+        }
+
+        function showPaymentError(message) {
+            const errorDiv = document.getElementById('paymentErrorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function showPaymentSuccess(message) {
+            const successDiv = document.getElementById('paymentSuccessMessage');
             successDiv.textContent = message;
             successDiv.style.display = 'block';
             setTimeout(() => successDiv.style.display = 'none', 5000);
