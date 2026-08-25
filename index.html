@@ -1649,16 +1649,19 @@
             } else if (order.status === 'Cancelled') {
                 statusColor = '#f44336';
                 statusEmoji = '❌';
+            } else if (order.status === 'Dispute') {
+                statusColor = '#ffa500';
+                statusEmoji = '⚠️';
             }
             
-            // Show payment option only if not paid and not cancelled
-            const isPaid = order.status === 'Paid' || order.status === 'Completed';
-            const isCancelled = order.status === 'Cancelled';
+            // Show payment & proof upload ONLY if status is 'Pending Payment'
+            const showPaymentSection = (order.status === 'Pending Payment');
             
             let paymentHTML = '';
+            let proofUploadHTML = '';
             let qrCodeUrl = '';
             
-            if (!isPaid && !isCancelled) {
+            if (showPaymentSection) {
                 // Generate QR code URL with correct UPI ID
                 const upiString = `upi://pay?pa=9884908910@hdfc&pn=Gold Shop&am=${amount}&tn=Order ${order.orderId}`;
                 const encodedUPI = encodeURIComponent(upiString);
@@ -1676,6 +1679,17 @@
                         <button onclick="copyToClipboard('9884908910@hdfc')" style="background: #667eea; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600;">📋 Copy UPI ID</button>
                     </div>
                 `;
+                
+                // Add proof upload section for pending payment orders
+                proofUploadHTML = `
+                    <div style="background: #f0f4f8; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #2196F3;">
+                        <h4 style="color: #2196F3; margin: 0 0 10px 0;">📸 Upload Payment Proof</h4>
+                        <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">After paying via UPI, upload your payment screenshot:</p>
+                        <input type="file" id="searchProofFile_${order.orderId}" accept="image/*" style="display: block; margin-bottom: 10px; padding: 8px; border: 2px solid #2196F3; border-radius: 4px; width: 100%;">
+                        <img id="searchProofPreview_${order.orderId}" style="display: none; max-width: 200px; max-height: 200px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button onclick="uploadSearchProof('${order.firebaseDocId}', '${order.orderId}')" style="background: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600; width: 100%;">✅ Upload & Submit Proof</button>
+                    </div>
+                `;
             }
             
             resultsDiv.innerHTML = `
@@ -1691,8 +1705,80 @@
                     <p style="margin: 5px 0;"><strong>Status:</strong> <span style="display: inline-block; background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${order.status || 'Pending'}</span></p>
                     <p style="margin: 5px 0;"><strong>Date:</strong> ${order.timestamp || order.createdAt}</p>
                     ${paymentHTML}
+                    ${proofUploadHTML}
                 </div>
             `;
+            
+            // Setup file preview for proof upload (only if showing payment section)
+            if (showPaymentSection) {
+                document.getElementById(`searchProofFile_${order.orderId}`).addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            document.getElementById(`searchProofPreview_${order.orderId}`).src = e.target.result;
+                            document.getElementById(`searchProofPreview_${order.orderId}`).style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        }
+        
+        function uploadSearchProof(firebaseDocId, orderId) {
+            const proofFile = document.getElementById(`searchProofFile_${orderId}`).files[0];
+            if (!proofFile) {
+                showError('Please select a payment proof file');
+                return;
+            }
+
+            // Show loading state
+            const uploadBtn = event.target;
+            const originalText = uploadBtn.textContent;
+            uploadBtn.textContent = '⏳ Uploading...';
+            uploadBtn.disabled = true;
+
+            // Read file as base64
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Proof = e.target.result;
+
+                // Update order in Firestore with proof
+                if (firebaseDocId && window.db) {
+                    db.collection('orders').doc(firebaseDocId).update({
+                        status: 'Proof Submitted',
+                        proofImage: base64Proof,
+                        proofSubmittedAt: new Date().toISOString(),
+                        proofFileName: proofFile.name
+                    }).then(() => {
+                        console.log("✅ Proof uploaded successfully for order:", orderId);
+                        showSuccess('✅ Payment proof submitted successfully! Admin will verify and confirm your order.');
+                        
+                        // Reset after 2 seconds
+                        setTimeout(() => {
+                            document.getElementById('searchOrderId').value = '';
+                            document.getElementById('searchResults').innerHTML = '';
+                        }, 2000);
+                    }).catch(error => {
+                        console.error("❌ Error uploading proof:", error);
+                        showError('Error uploading proof: ' + error.message);
+                        uploadBtn.textContent = originalText;
+                        uploadBtn.disabled = false;
+                    });
+                } else {
+                    showError('Order ID not found. Please try again.');
+                    uploadBtn.textContent = originalText;
+                    uploadBtn.disabled = false;
+                }
+            };
+
+            reader.onerror = function() {
+                showError('Error reading file. Please try again.');
+                uploadBtn.textContent = originalText;
+                uploadBtn.disabled = false;
+            };
+
+            reader.readAsDataURL(proofFile);
         }
 
         function showError(message) {
