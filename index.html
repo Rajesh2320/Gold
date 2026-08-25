@@ -1455,6 +1455,12 @@
         function showPaymentSectionWithOrder(orderId, amountNumber, amountString) {
             console.log("🎯 Showing payment section for Order:", orderId, "Amount:", amountString);
             
+            // SIMPLE FIX: Clear payment messages first
+            const errorDiv = document.getElementById('paymentErrorMessage');
+            const successDiv = document.getElementById('paymentSuccessMessage');
+            if (errorDiv) errorDiv.style.display = 'none';
+            if (successDiv) successDiv.style.display = 'none';
+            
             // Reset and hide order form completely
             document.getElementById('orderForm').reset();
             document.getElementById('orderForm').style.display = 'none';
@@ -1479,6 +1485,11 @@
             
             // Clear proof file input
             document.getElementById('proofFile').value = '';
+            
+            // SIMPLE FIX: Clear old QR image and preview before generating new one
+            document.getElementById('qrCode').src = '';
+            const previewContainer = document.getElementById('previewContainer');
+            if (previewContainer) previewContainer.style.display = 'none';
             
             // Generate QR Code with amount as number
             generatePaymentQRCode(orderId, amountNumber);
@@ -1519,14 +1530,18 @@
         }
 
         function uploadPaymentProof() {
+            console.log("📸 UPLOADING PAYMENT PROOF...");
             const proofFile = document.getElementById('proofFile').files[0];
             
             // CRITICAL: Check if file is selected first
             if (!proofFile) {
+                console.log("❌ NO FILE SELECTED");
                 showPaymentError('❌ Please upload payment proof first');
                 return;
             }
 
+            console.log("📁 FILE SELECTED:", proofFile.name);
+            
             // Show loading state
             const uploadBtn = event.target;
             const originalText = uploadBtn.textContent;
@@ -1536,18 +1551,21 @@
             // Read file as base64
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log("📥 FILE READ AS BASE64");
                 const base64Proof = e.target.result;
                 const orderId = document.getElementById('payOrderId').textContent;
+                console.log("📝 ORDER ID:", orderId, "DOC ID:", window.currentOrderDocId);
 
                 // Update order in Firestore with proof
                 if (window.currentOrderDocId) {
+                    console.log("💾 SAVING PROOF TO FIRESTORE...");
                     db.collection('orders').doc(window.currentOrderDocId).update({
                         status: 'Proof Submitted',
                         proofImage: base64Proof,
                         proofSubmittedAt: new Date().toISOString(),
                         proofFileName: proofFile.name
                     }).then(() => {
-                        console.log("✅ Proof uploaded successfully for order:", orderId);
+                        console.log("✅ PROOF SAVED! SHOWING SUCCESS MESSAGE...");
                         showPaymentSuccess('✅ Thanks for uploading the payment proof! The same has been uploaded and stored successfully. Admin will verify the same and will let you know further actions.');
                         
                         // Reset after 3 seconds
@@ -1555,12 +1573,13 @@
                             goBackFromPayment();
                         }, 3000);
                     }).catch(error => {
-                        console.error("❌ Error uploading proof:", error);
+                        console.error("❌ FIRESTORE ERROR:", error);
                         showPaymentError('❌ Error uploading proof: ' + error.message);
                         uploadBtn.textContent = originalText;
                         uploadBtn.disabled = false;
                     });
                 } else {
+                    console.error("❌ NO DOC ID FOUND");
                     showPaymentError('❌ Order ID not found. Please try again.');
                     uploadBtn.textContent = originalText;
                     uploadBtn.disabled = false;
@@ -1568,11 +1587,13 @@
             };
 
             reader.onerror = function() {
+                console.error("❌ FILE READ ERROR");
                 showPaymentError('❌ Error reading file. Please try again.');
                 uploadBtn.textContent = originalText;
                 uploadBtn.disabled = false;
             };
 
+            console.log("📖 READING FILE...");
             reader.readAsDataURL(proofFile);
         }
 
@@ -1961,10 +1982,24 @@
         }
 
         function showPaymentSuccess(message) {
+            console.log("✅ SHOWING SUCCESS MESSAGE:", message);
             const successDiv = document.getElementById('paymentSuccessMessage');
+            if (!successDiv) {
+                console.error("❌ SUCCESS MESSAGE DIV NOT FOUND!");
+                return;
+            }
             successDiv.textContent = message;
             successDiv.style.display = 'block';
-            setTimeout(() => successDiv.style.display = 'none', 5000);
+            console.log("✅ Success div display set to block");
+            
+            // SIMPLE FIX: Scroll message into view
+            successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            console.log("✅ Scrolled to success message");
+            
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+                console.log("✅ Hidden success message after 5 seconds");
+            }, 5000);
         }
 
         function copyToClipboard(text) {
