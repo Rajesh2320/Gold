@@ -966,9 +966,10 @@
                 // Product analytics - Use cartBreakdown if available, otherwise use old logic
                 if (order.cartBreakdown) {
                     // NEW: Use actual product breakdown stored with order
-                    if (order.cartBreakdown['250g'] && order.cartBreakdown['250g'] > 0) productOrders['250g'] += order.cartBreakdown['250g'];
-                    if (order.cartBreakdown['500g'] && order.cartBreakdown['500g'] > 0) productOrders['500g'] += order.cartBreakdown['500g'];
-                    if (order.cartBreakdown['1kg'] && order.cartBreakdown['1kg'] > 0) productOrders['1kg'] += order.cartBreakdown['1kg'];
+                    // Add counts directly - if 0, it stays 0; if > 0, it adds
+                    productOrders['250g'] += (order.cartBreakdown['250g'] || 0);
+                    productOrders['500g'] += (order.cartBreakdown['500g'] || 0);
+                    productOrders['1kg'] += (order.cartBreakdown['1kg'] || 0);
                 } else {
                     // FALLBACK: Old logic for orders without cartBreakdown
                     const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
