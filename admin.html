@@ -963,11 +963,19 @@
                     }
                 }
                 
-                // Product analytics - Count all orders but only for those with weight data
-                const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
-                if (kgs <= 0.3) productOrders['250g']++;
-                else if (kgs <= 0.6) productOrders['500g']++;
-                else productOrders['1kg']++;
+                // Product analytics - Use cartBreakdown if available, otherwise use old logic
+                if (order.cartBreakdown) {
+                    // NEW: Use actual product breakdown stored with order
+                    if (order.cartBreakdown['250g'] && order.cartBreakdown['250g'] > 0) productOrders['250g'] += order.cartBreakdown['250g'];
+                    if (order.cartBreakdown['500g'] && order.cartBreakdown['500g'] > 0) productOrders['500g'] += order.cartBreakdown['500g'];
+                    if (order.cartBreakdown['1kg'] && order.cartBreakdown['1kg'] > 0) productOrders['1kg'] += order.cartBreakdown['1kg'];
+                } else {
+                    // FALLBACK: Old logic for orders without cartBreakdown
+                    const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
+                    if (kgs <= 0.3) productOrders['250g']++;
+                    else if (kgs <= 0.6) productOrders['500g']++;
+                    else productOrders['1kg']++;
+                }
                 
                 // Hourly orders (today only) - Only count paid/completed for revenue
                 if (orderDate === today) {
@@ -1010,10 +1018,13 @@
             // Update UI - Product Analytics
             document.getElementById('mostPopularProduct').textContent = mostPopular;
             
+            // Calculate total product items (not orders)
+            const totalProductItems = Object.values(productOrders).reduce((sum, count) => sum + count, 0);
+            
             let productMixHTML = '';
             Object.entries(productOrders).forEach(([product, count]) => {
-                const pct = monthOrders > 0 ? ((count / monthOrders) * 100).toFixed(1) : 0;
-                productMixHTML += `<div>• ${product}: ${count} orders (${pct}%)</div>`;
+                const pct = totalProductItems > 0 ? ((count / totalProductItems) * 100).toFixed(1) : 0;
+                productMixHTML += `<div>• ${product}: ${count} items (${pct}%)</div>`;
             });
             document.getElementById('productMixContent').innerHTML = productMixHTML || 'No data yet';
             
@@ -1051,8 +1062,9 @@
             // Peak hours
             const peakHoursBody = document.getElementById('peakHoursBody');
             peakHoursBody.innerHTML = '';
-            Object.entries(hourlyOrders).forEach(([hour, data]) => {
+            Object.entries(hourlyOrders).forEach(([hourStr, data]) => {
                 if (data.count > 0) {
+                    const hour = parseInt(hourStr);  // CRITICAL: Convert string to number
                     const hourLabel = hour === 0 ? '12 AM' : (hour < 12 ? hour + ' AM' : (hour === 12 ? '12 PM' : (hour - 12) + ' PM'));
                     const barLength = (data.count / 10) * 100;
                     const row = document.createElement('tr');
