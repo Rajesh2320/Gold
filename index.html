@@ -536,6 +536,7 @@
 
                 <!-- Submit Button -->
                 <button type="submit" style="margin-top: 30px;">✅ Place Order</button>
+                <button type="button" onclick="clearAndRestart()" class="secondary" style="margin-top: 10px;">🔄 Clear & Restart</button>
             </form>
         </div>
 
@@ -549,6 +550,7 @@
             </div>
 
             <button type="button" onclick="searchOrder()">🔍 Search Order</button>
+            <button type="button" onclick="clearAndRestart()" class="secondary">🔄 Clear & Restart</button>
 
             <!-- Search Results -->
             <div id="searchResults" style="margin-top: 30px;"></div>
@@ -1577,16 +1579,149 @@
             renderProducts();
             updateCart();
             
+            // CRITICAL: Clear ALL form state
+            // Reset delivery type
+            selectedDeliveryType = 'self-pickup';
+            document.getElementById('selfPickup').checked = true;
+            document.getElementById('homeDelivery').checked = false;
+            document.getElementById('deliveryDetails').style.display = 'none';
+            
+            // Clear delivery charge display
+            const deliveryRow = document.getElementById('deliveryChargeRow');
+            if (deliveryRow) {
+                deliveryRow.style.display = 'none';
+            }
+            const deliveryAmount = document.getElementById('deliveryChargeAmount');
+            if (deliveryAmount) {
+                deliveryAmount.textContent = '₹0';
+            }
+            
+            // Clear PIN code validation message
+            const pincodeMessage = document.getElementById('pincodeMessage');
+            if (pincodeMessage) {
+                pincodeMessage.textContent = '';
+                pincodeMessage.style.display = 'none';
+            }
+            
+            // Clear all form inputs
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerEmail').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('deliveryAddress').value = '';
+            document.getElementById('pincode').value = '';
+            
+            // Reset final amount
+            const finalAmountEl = document.getElementById('finalAmount');
+            if (finalAmountEl) {
+                finalAmountEl.textContent = '₹0';
+            }
+            
+            // Clear search section
+            document.getElementById('searchOrderId').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+            
             // Scroll to top of form
             document.getElementById('orderForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            console.log("✅ Cleared all form fields and reset to initial state");
         }
 
         function switchTab(tab) {
+            console.log("🔄 Switching to tab:", tab);
+            
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             
             document.getElementById(tab).classList.add('active');
             event.target.classList.add('active');
+            
+            // AUTO-CLEAR search results when switching to search tab
+            if (tab === 'search-tab') {
+                console.log("📋 Clearing search results automatically");
+                document.getElementById('searchOrderId').value = '';
+                document.getElementById('searchResults').innerHTML = '';
+            }
+            
+            // AUTO-CLEAR when switching to order tab (from search tab)
+            if (tab === 'order-tab') {
+                console.log("📝 Switched to Place Order tab");
+                // Form stays as is, user can continue ordering
+            }
+        }
+        
+        function clearAndRestart() {
+            console.log("🔄 CLEAR & RESTART - Resetting everything");
+            
+            // Hide payment section
+            const paymentSection = document.getElementById('paymentSection');
+            paymentSection.style.display = 'none';
+            paymentSection.classList.remove('active');
+            
+            // Clear cart
+            cart = {};
+            renderProducts();
+            updateCart();
+            
+            // Reset delivery type
+            selectedDeliveryType = 'self-pickup';
+            const pickupRadio = document.querySelector('input[name="deliveryType"][value="pickup"]');
+            const deliveryRadio = document.querySelector('input[name="deliveryType"][value="delivery"]');
+            if (pickupRadio) pickupRadio.checked = true;
+            if (deliveryRadio) deliveryRadio.checked = false;
+            
+            // Hide delivery details
+            const addressGroup = document.getElementById('addressGroup');
+            const pincodeGroup = document.getElementById('pincodeGroup');
+            if (addressGroup) addressGroup.classList.add('hidden');
+            if (pincodeGroup) pincodeGroup.classList.add('hidden');
+            
+            // Clear delivery charge display
+            const deliveryRow = document.getElementById('deliveryChargeRow');
+            if (deliveryRow) deliveryRow.style.display = 'none';
+            const deliveryAmount = document.getElementById('deliveryChargeAmount');
+            if (deliveryAmount) deliveryAmount.textContent = '₹0';
+            
+            // Clear PIN validation message
+            const pincodeError = document.getElementById('pincodeError');
+            if (pincodeError) pincodeError.textContent = '';
+            const deliveryChargeDisplay = document.getElementById('deliveryChargeDisplay');
+            if (deliveryChargeDisplay) deliveryChargeDisplay.textContent = '';
+            
+            // Clear all form inputs
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerEmail').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('deliveryAddress').value = '';
+            document.getElementById('pincode').value = '';
+            
+            // Reset final amount
+            const finalAmountEl = document.getElementById('finalAmount');
+            if (finalAmountEl) finalAmountEl.textContent = '₹0';
+            
+            // Clear search section
+            document.getElementById('searchOrderId').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+            
+            // Switch to Place Order tab
+            const orderTab = document.getElementById('order-tab');
+            const searchTab = document.getElementById('search-tab');
+            const orderBtn = document.querySelector('button[onclick="switchTab(\'order-tab\')"]');
+            const searchBtn = document.querySelector('button[onclick="switchTab(\'search-tab\')"]');
+            
+            if (orderTab && searchTab && orderBtn && searchBtn) {
+                orderTab.classList.add('active');
+                searchTab.classList.remove('active');
+                orderBtn.classList.add('active');
+                searchBtn.classList.remove('active');
+            }
+            
+            // Scroll to products
+            const productsGrid = document.getElementById('productsGrid');
+            if (productsGrid) {
+                productsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            console.log("✅ Cleared and restarted - Ready for new order");
         }
 
         function searchOrder() {
