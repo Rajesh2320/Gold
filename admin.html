@@ -370,6 +370,10 @@
             </div>
         </div>
 
+        <!-- Login error box lives OUTSIDE the dashboard so it's visible
+             even while the dashboard itself is still display:none -->
+        <div class="error-message" id="loginErrorMessage" style="margin-bottom: 20px;"></div>
+
         <!-- Dashboard (hidden until login) -->
         <div class="dashboard" id="dashboard">
             <!-- Error/Success Messages -->
@@ -706,6 +710,7 @@
         });
 
         function showDashboard() {
+            hideLoginError();
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('logoutBtn').style.display = 'block';
             document.getElementById('dashboard').classList.add('active');
@@ -724,8 +729,10 @@
             const email = document.getElementById('emailInput').value.trim();
             const password = document.getElementById('passwordInput').value;
 
+            hideLoginError();
+
             if (!email || !password) {
-                showError('Please enter both email and password');
+                showLoginError('Please enter both email and password');
                 return;
             }
 
@@ -734,8 +741,20 @@
                     document.getElementById('passwordInput').value = '';
                 })
                 .catch(error => {
-                    showError('Login failed: ' + error.message);
+                    showLoginError('Login failed: ' + error.code + ' — ' + error.message);
                 });
+        }
+
+        function showLoginError(message) {
+            const el = document.getElementById('loginErrorMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        function hideLoginError() {
+            const el = document.getElementById('loginErrorMessage');
+            el.style.display = 'none';
+            el.textContent = '';
         }
 
         function logout() {
