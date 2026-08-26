@@ -1478,6 +1478,8 @@
             const pincodeGroup = document.getElementById('pincodeGroup');
             if (addressGroup) addressGroup.classList.add('hidden');
             if (pincodeGroup) pincodeGroup.classList.add('hidden');
+            document.getElementById('deliveryAddress').required = false;
+            document.getElementById('pincode').required = false;
             
             const deliveryRow = document.getElementById('deliveryChargeRow');
             if (deliveryRow) {
@@ -1563,6 +1565,8 @@
             const pincodeGroup = document.getElementById('pincodeGroup');
             if (addressGroup) addressGroup.classList.add('hidden');
             if (pincodeGroup) pincodeGroup.classList.add('hidden');
+            document.getElementById('deliveryAddress').required = false;
+            document.getElementById('pincode').required = false;
             
             const deliveryRow = document.getElementById('deliveryChargeRow');
             if (deliveryRow) deliveryRow.style.display = 'none';
