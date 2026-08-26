@@ -362,7 +362,8 @@
             <h1>🥇 Gold Orders Admin Dashboard</h1>
             <div class="header-right">
                 <div class="login-form" id="loginForm">
-                    <input type="password" id="passwordInput" placeholder="Admin Password">
+                    <input type="email" id="emailInput" placeholder="Admin Email" autocomplete="username">
+                    <input type="password" id="passwordInput" placeholder="Admin Password" autocomplete="current-password">
                     <button onclick="login()">Login</button>
                 </div>
                 <button class="logout-btn" id="logoutBtn" onclick="logout()" style="display: none;">Logout</button>
@@ -648,41 +649,6 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div class="modal" id="editModal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeModal('editModal')">&times;</span>
-            <h2 style="margin-bottom: 20px; color: #c5a028;">Edit Order</h2>
-            <form id="editForm" onsubmit="saveOrder(event)">
-                <div class="form-group">
-                    <label>Order ID</label>
-                    <input type="text" id="editOrderId" readonly style="background: #f0f0f0;">
-                </div>
-                <div class="form-group">
-                    <label>Customer Name</label>
-                    <input type="text" id="editName" required>
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="editEmail" required>
-                </div>
-                <div class="form-group">
-                    <label>Phone</label>
-                    <input type="tel" id="editPhone" required>
-                </div>
-                <div class="form-group">
-                    <label>Status</label>
-                    <select id="editStatus" required>
-                        <option value="Pending Payment">Pending Payment</option>
-                        <option value="Pending">Paid (Pending)</option>
-                        <option value="Completed">Completed</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-edit" style="width: 100%; margin-top: 20px;">Save Changes</button>
-            </form>
-        </div>
-    </div>
-
     <!-- Proof Modal -->
     <div class="modal" id="proofModal">
         <div class="proof-modal-content">
@@ -700,6 +666,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     
     <!-- Chart.js for Analytics -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -715,37 +682,84 @@
             appId: "1:889006387701:web:c567caa1ec22f95697b0bc"
         };
 
-        let db = null;
-        let allOrders = [];
-        let currentEditDoc = null;
-        const ADMIN_PASSWORD = "admin123"; // Admin password
-
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
+        const db = firebase.firestore();
+        const auth = firebase.auth();
         console.log("✅ Firebase initialized for admin panel!");
 
-        // Login
-        function login() {
-            const password = document.getElementById('passwordInput').value;
-            if (password === ADMIN_PASSWORD) {
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('logoutBtn').style.display = 'block';
-                document.getElementById('dashboard').classList.add('active');
-                document.getElementById('passwordInput').value = '';
-                loadOrdersStatus();
-                loadOrders();
+        let allOrders = [];
+
+        // ============================================================
+        // SECURITY: admin identity now comes entirely from Firebase
+        // Authentication. There is no password stored in this file —
+        // Firestore rules check request.auth.uid server-side, so even
+        // someone reading this source code learns nothing that grants
+        // access. Create the one admin user in the Firebase console
+        // under Authentication > Users (see SECURITY_SETUP_GUIDE.md).
+        // ============================================================
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                showDashboard();
             } else {
-                showError('Invalid password');
+                showLoginScreen();
             }
+        });
+
+        function showDashboard() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'block';
+            document.getElementById('dashboard').classList.add('active');
+            loadOrdersStatus();
+            loadOrders();
         }
 
-        // Logout
-        function logout() {
+        function showLoginScreen() {
             document.getElementById('loginForm').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('dashboard').classList.remove('active');
             allOrders = [];
+        }
+
+        function login() {
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+
+            if (!email || !password) {
+                showError('Please enter both email and password');
+                return;
+            }
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    document.getElementById('passwordInput').value = '';
+                })
+                .catch(error => {
+                    showError('Login failed: ' + error.message);
+                });
+        }
+
+        function logout() {
+            auth.signOut();
+        }
+
+        // ============================================================
+        // SECURITY: escape any customer-supplied text before it is
+        // ever inserted into innerHTML/attributes. displayOrders()
+        // below builds rows with DOM methods + textContent instead of
+        // string-interpolated innerHTML specifically so a customer
+        // typing e.g. their name as `"><img src=x onerror=alert(1)>`
+        // at order time can never execute in this admin session.
+        // escapeHtml() is kept as a defensive backstop for the few
+        // remaining places text is still assembled as a string.
+        // ============================================================
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         // Load Orders from Firestore
@@ -762,19 +776,9 @@
                     const order = doc.data();
                     order.firebaseDocId = doc.id;
                     allOrders.push(order);
-                    
-                    console.log("📋 Order loaded:", {
-                        orderId: order.orderId,
-                        customerName: order.customerName,
-                        status: order.status,
-                        createdAt: order.createdAt,
-                        timestamp: order.timestamp,
-                        totalAmount: order.totalAmount
-                    });
                 });
                 
                 console.log("✅ Loaded", allOrders.length, "orders total");
-                console.log("All orders array:", allOrders);
                 
                 displayOrders(allOrders);
                 updateAnalytics();
@@ -785,61 +789,110 @@
         }
 
         // Display Orders in Table
+        // ============================================================
+        // SECURITY: built with document.createElement + textContent
+        // (never innerHTML) for every value that came from a customer.
+        // Button handlers are attached with addEventListener closures
+        // over the real `order` object, never by interpolating fields
+        // into an onclick="..." string — that string-building was the
+        // actual stored-XSS vector in the old version (a customer name
+        // containing a quote could break out of the attribute).
+        // ============================================================
         function displayOrders(orders) {
             console.log("🖼️  Displaying orders, count:", orders.length);
             const tbody = document.getElementById('ordersBody');
             tbody.innerHTML = '';
 
             if (orders.length === 0) {
-                console.log("⚠️  No orders to display");
                 document.getElementById('loadingMessage').style.display = 'none';
                 document.getElementById('emptyMessage').style.display = 'block';
                 document.getElementById('ordersTable').style.display = 'none';
                 return;
             }
 
-            orders.forEach((order, index) => {
-                console.log(`Creating row ${index + 1} for order:`, order.orderId);
+            orders.forEach(order => {
                 const row = document.createElement('tr');
-                const statusClass = `status-${order.status.toLowerCase().replace(' ', '-')}`;
-                
-                // Parse amount - handle both number and formatted string
+                const statusClass = `status-${(order.status || '').toLowerCase().replace(/ /g, '-')}`;
+
                 let amount = order.totalAmount;
                 if (typeof amount === 'string') {
                     amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
                 }
-                
+
                 const kgs = order.totalWeight || order.totalKg || 0;
-                const deliveryType = order.deliveryType === 'delivery' ? '🚚 Delivery' : '🏪 Pickup';
-                
-                // Build action buttons
-                let actionButtons = `
-                    <button class="btn btn-edit" onclick="updateOrderStatus('${order.firebaseDocId}', '${order.orderId}')" style="padding: 4px 8px; font-size: 11px;">Status</button>
-                    <button class="btn" onclick="sendWhatsApp('${order.customerPhone}', '${order.orderId}')" style="background: #25D366; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">WhatsApp</button>
-                    <button class="btn" onclick="sendEmail('${order.customerEmail}', '${order.orderId}')" style="background: #EA4335; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">Email</button>
-                `;
-                
-                // Add View Proof button if proof exists
+                const deliveryTypeLabel = order.deliveryType === 'delivery' ? '🚚 Delivery' : '🏪 Pickup';
+
+                const plainCells = [
+                    order.orderId,
+                    order.customerName,
+                    order.customerPhone,
+                    order.customerEmail,
+                    `${kgs}kg`,
+                    `₹${amount.toLocaleString()}`,
+                    deliveryTypeLabel
+                ];
+                plainCells.forEach(value => {
+                    const td = document.createElement('td');
+                    td.textContent = value;
+                    row.appendChild(td);
+                });
+
+                const statusTd = document.createElement('td');
+                const statusSpan = document.createElement('span');
+                statusSpan.className = `status-badge ${statusClass}`;
+                statusSpan.textContent = order.status || 'Pending';
+                statusTd.appendChild(statusSpan);
+                row.appendChild(statusTd);
+
+                const dateTd = document.createElement('td');
+                dateTd.textContent = order.timestamp || order.createdAt || '';
+                row.appendChild(dateTd);
+
+                const actionsTd = document.createElement('td');
+                actionsTd.style.display = 'flex';
+                actionsTd.style.gap = '4px';
+                actionsTd.style.flexWrap = 'wrap';
+
+                const statusBtn = document.createElement('button');
+                statusBtn.className = 'btn btn-edit';
+                statusBtn.style.padding = '4px 8px';
+                statusBtn.style.fontSize = '11px';
+                statusBtn.textContent = 'Status';
+                statusBtn.addEventListener('click', () => updateOrderStatus(order.firebaseDocId, order.orderId));
+                actionsTd.appendChild(statusBtn);
+
+                const waBtn = document.createElement('button');
+                waBtn.className = 'btn';
+                waBtn.style.cssText = 'background:#25D366;color:white;padding:4px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;';
+                waBtn.textContent = 'WhatsApp';
+                waBtn.addEventListener('click', () => sendWhatsApp(order.customerPhone, order.orderId));
+                actionsTd.appendChild(waBtn);
+
+                const emailBtn = document.createElement('button');
+                emailBtn.className = 'btn';
+                emailBtn.style.cssText = 'background:#EA4335;color:white;padding:4px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;';
+                emailBtn.textContent = 'Email';
+                emailBtn.addEventListener('click', () => sendEmail(order.customerEmail, order.orderId));
+                actionsTd.appendChild(emailBtn);
+
                 if (order.proofImage) {
-                    actionButtons += `<button class="btn" onclick="viewProof('${order.orderId}', '${order.customerName}', '${order.totalAmount}', '${order.proofImage.replace(/'/g, "\\'")}')" style="background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px;">📷 Proof</button>`;
+                    const proofBtn = document.createElement('button');
+                    proofBtn.className = 'btn';
+                    proofBtn.style.cssText = 'background:#28a745;color:white;padding:4px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;';
+                    proofBtn.textContent = '📷 Proof';
+                    proofBtn.addEventListener('click', () => viewProof(order.orderId, order.customerName, amount, order.proofImage));
+                    actionsTd.appendChild(proofBtn);
                 }
-                
-                actionButtons += `<button class="btn btn-delete" onclick="deleteOrder('${order.firebaseDocId}')" style="padding: 4px 8px; font-size: 11px;">Delete</button>`;
-                
-                row.innerHTML = `
-                    <td>${order.orderId}</td>
-                    <td>${order.customerName}</td>
-                    <td>${order.customerPhone}</td>
-                    <td>${order.customerEmail}</td>
-                    <td>${kgs}kg</td>
-                    <td>₹${amount.toLocaleString()}</td>
-                    <td>${deliveryType}</td>
-                    <td><span class="status-badge ${statusClass}">${order.status}</span></td>
-                    <td>${order.timestamp || order.createdAt}</td>
-                    <td style="display: flex; gap: 4px; flex-wrap: wrap;">
-                        ${actionButtons}
-                    </td>
-                `;
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-delete';
+                deleteBtn.style.padding = '4px 8px';
+                deleteBtn.style.fontSize = '11px';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => deleteOrder(order.firebaseDocId));
+                actionsTd.appendChild(deleteBtn);
+
+                row.appendChild(actionsTd);
                 tbody.appendChild(row);
             });
 
@@ -854,8 +907,6 @@
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
             
-            // Initialize variables
-            let todayOrders = 0;
             let monthOrders = 0;
             let totalRevenue = 0;
             let monthRevenue = 0;
@@ -871,66 +922,53 @@
             let deliveryRevenue = 0;
             let uniqueCustomersMonth = new Set();
             let uniqueCustomersToday = new Set();
-            let repeatCustomers = {};
             let customerRevenue = {};
             let productOrders = { '250g': 0, '500g': 0, '1kg': 0 };
             let hourlyOrders = {};
             
-            // Initialize hourly orders
             for (let i = 0; i < 24; i++) {
                 hourlyOrders[i] = { count: 0, revenue: 0 };
             }
             
-            // Process all orders
             allOrders.forEach(order => {
                 const orderDate = order.timestamp ? order.timestamp.split(',')[0] : '';
                 const parsedDate = parseDateDDMMYYYY(orderDate);
                 
-                // Parse amount
                 let amount = order.totalAmount;
                 if (typeof amount === 'string') {
                     amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
                 }
                 
-                // Get hour from timestamp
                 let hour = 0;
                 if (order.timestamp) {
                     const timePart = order.timestamp.split(', ')[1];
                     if (timePart) {
                         hour = parseInt(timePart.split(':')[0]);
-                        // Convert 12-hour to 24-hour
                         if (timePart.includes('pm') && hour !== 12) hour += 12;
                         if (timePart.includes('am') && hour === 12) hour = 0;
                     }
                 }
                 
-                // Total revenue - Only Paid and Completed orders
                 if (order.status === 'Paid' || order.status === 'Completed') {
                     totalRevenue += amount;
                 }
                 
-                // Outstanding amount (only truly unpaid orders - Pending Payment AND Proof Submitted)
                 if (order.status === 'Pending Payment' || order.status === 'Proof Submitted') {
                     outstandingAmount += amount;
                 }
                 
-                // Today's orders
                 if (orderDate === today) {
-                    todayOrders++;
                     uniqueCustomersToday.add(order.customerPhone);
                 }
                 
-                // This month's orders
                 if (parsedDate && parsedDate.getMonth() === currentMonth && parsedDate.getFullYear() === currentYear) {
                     monthOrders++;
                     uniqueCustomersMonth.add(order.customerPhone);
                     
-                    // Add to month revenue only if confirmed paid/completed
                     if (order.status === 'Paid' || order.status === 'Completed') {
                         monthRevenue += amount;
                     }
                     
-                    // Track customer repeat orders and revenue
                     const phone = order.customerPhone;
                     if (!customerRevenue[phone]) {
                         customerRevenue[phone] = { name: order.customerName, count: 0, revenue: 0, kgs: 0 };
@@ -943,14 +981,12 @@
                     customerRevenue[phone].kgs += kgs;
                 }
                 
-                // Status breakdown - Only Paid and Completed count as verified paid
                 if (order.status === 'Paid') paidCount++;
                 else if (order.status === 'Completed') completedCount++;
                 else if (order.status === 'Cancelled') cancelledCount++;
                 else if (order.status === 'Dispute') disputeCount++;
                 else if (order.status === 'Pending Payment' || order.status === 'Proof Submitted') pendingPaymentCount++;
                 
-                // Delivery type - Only count revenue for paid/completed orders
                 if (order.deliveryType === 'pickup') {
                     pickupCount++;
                     if (order.status === 'Paid' || order.status === 'Completed') {
@@ -963,22 +999,17 @@
                     }
                 }
                 
-                // Product analytics - Use cartBreakdown if available, otherwise use old logic
                 if (order.cartBreakdown) {
-                    // NEW: Use actual product breakdown stored with order
-                    // Add counts directly - if 0, it stays 0; if > 0, it adds
                     productOrders['250g'] += (order.cartBreakdown['250g'] || 0);
                     productOrders['500g'] += (order.cartBreakdown['500g'] || 0);
                     productOrders['1kg'] += (order.cartBreakdown['1kg'] || 0);
                 } else {
-                    // FALLBACK: Old logic for orders without cartBreakdown
                     const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
                     if (kgs <= 0.3) productOrders['250g']++;
                     else if (kgs <= 0.6) productOrders['500g']++;
                     else productOrders['1kg']++;
                 }
                 
-                // Hourly orders (today only) - Only count paid/completed for revenue
                 if (orderDate === today) {
                     hourlyOrders[hour].count++;
                     if (order.status === 'Paid' || order.status === 'Completed') {
@@ -987,7 +1018,6 @@
                 }
             });
             
-            // Calculate derived metrics
             const totalOrders = paidCount + completedCount + cancelledCount + disputeCount + pendingPaymentCount;
             const paidOrders = paidCount + completedCount;
             const completionRate = totalOrders > 0 ? ((paidOrders / totalOrders) * 100).toFixed(1) : 0;
@@ -996,17 +1026,14 @@
             const avgOrderValue = monthOrders > 0 ? Math.round(monthRevenue / monthOrders) : 0;
             const repeatCustomerCount = Object.values(customerRevenue).filter(c => c.count > 1).length;
             
-            // Delivery split
             const totalDeliveryOrders = pickupCount + deliveryCount;
             const pickupPct = totalDeliveryOrders > 0 ? ((pickupCount / totalDeliveryOrders) * 100).toFixed(1) : 0;
             const deliveryPct = totalDeliveryOrders > 0 ? ((deliveryCount / totalDeliveryOrders) * 100).toFixed(1) : 0;
             
-            // Most popular product
             const mostPopular = Object.keys(productOrders).reduce((a, b) => 
                 productOrders[a] > productOrders[b] ? a : b
             );
             
-            // Update UI - Key Metrics
             document.getElementById('totalRevenue').textContent = '₹' + totalRevenue.toLocaleString();
             document.getElementById('outstandingAmount').textContent = '₹' + outstandingAmount.toLocaleString();
             document.getElementById('avgOrderValue').textContent = '₹' + avgOrderValue.toLocaleString();
@@ -1016,31 +1043,28 @@
             document.getElementById('uniqueCustomers').textContent = uniqueCustomersMonth.size;
             document.getElementById('repeatCustomers').textContent = repeatCustomerCount;
             
-            // Update UI - Product Analytics
             document.getElementById('mostPopularProduct').textContent = mostPopular;
             
-            // Calculate total product items (not orders)
             const totalProductItems = Object.values(productOrders).reduce((sum, count) => sum + count, 0);
             
             let productMixHTML = '';
             Object.entries(productOrders).forEach(([product, count]) => {
                 const pct = totalProductItems > 0 ? ((count / totalProductItems) * 100).toFixed(1) : 0;
-                productMixHTML += `<div>• ${product}: ${count} items (${pct}%)</div>`;
+                productMixHTML += `<div>• ${escapeHtml(product)}: ${count} items (${pct}%)</div>`;
             });
             document.getElementById('productMixContent').innerHTML = productMixHTML || 'No data yet';
             
-            // Update UI - Delivery Analytics
             document.getElementById('pickupPercentage').textContent = pickupPct + '%';
             document.getElementById('pickupCount').textContent = pickupCount + ' orders';
             document.getElementById('deliveryPercentage').textContent = deliveryPct + '%';
             document.getElementById('deliveryCount').textContent = deliveryCount + ' orders';
             
-            // Update UI - Customer Insights
             document.getElementById('newCustomersToday').textContent = uniqueCustomersToday.size;
             document.getElementById('newCustomersMonth').textContent = uniqueCustomersMonth.size;
             document.getElementById('monthlyAvgOrderValue').textContent = '₹' + avgOrderValue.toLocaleString();
             
-            // Top customers
+            // Top customers — built with textContent, not innerHTML,
+            // since customer name/phone are attacker-controlled.
             const topCustomers = Object.entries(customerRevenue)
                 .sort((a, b) => b[1].revenue - a[1].revenue)
                 .slice(0, 10);
@@ -1049,23 +1073,23 @@
             topCustomersBody.innerHTML = '';
             topCustomers.forEach((item, index) => {
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>${index + 1}</strong></td>
-                    <td>${item[1].name}</td>
-                    <td>${item[0]}</td>
-                    <td>${item[1].count}</td>
-                    <td>${item[1].kgs.toFixed(2)}</td>
-                    <td>₹${item[1].revenue.toLocaleString()}</td>
-                `;
+                const cells = [
+                    String(index + 1), item[1].name, item[0], String(item[1].count),
+                    item[1].kgs.toFixed(2), '₹' + item[1].revenue.toLocaleString()
+                ];
+                cells.forEach(val => {
+                    const td = document.createElement('td');
+                    td.textContent = val;
+                    row.appendChild(td);
+                });
                 topCustomersBody.appendChild(row);
             });
             
-            // Peak hours
             const peakHoursBody = document.getElementById('peakHoursBody');
             peakHoursBody.innerHTML = '';
             Object.entries(hourlyOrders).forEach(([hourStr, data]) => {
                 if (data.count > 0) {
-                    const hour = parseInt(hourStr);  // CRITICAL: Convert string to number
+                    const hour = parseInt(hourStr);
                     const hourLabel = hour === 0 ? '12 AM' : (hour < 12 ? hour + ' AM' : (hour === 12 ? '12 PM' : (hour - 12) + ' PM'));
                     const barLength = (data.count / 10) * 100;
                     const row = document.createElement('tr');
@@ -1079,15 +1103,12 @@
                 }
             });
             
-            // Update Charts
             updateCharts(paidOrders, cancelledCount, disputeCount, pendingPaymentCount);
             
-            // Update analytics tables
             updatePast3DaysSummary();
             updateMTDSummary();
         }
 
-        // Update Charts
         let statusChart = null;
         let trendChart = null;
         
@@ -1129,7 +1150,6 @@
             const ctx = document.getElementById('revenueTrendChart');
             if (!ctx) return;
             
-            // Get last 7 days revenue
             const days = [];
             const revenues = [];
             const today = new Date();
@@ -1190,12 +1210,10 @@
             });
         }
 
-        // Get date in dd/mm/yyyy format
         function formatDateDDMMYYYY(date) {
             return date.toLocaleDateString('en-IN');
         }
 
-        // Parse date from dd/mm/yyyy string
         function parseDateDDMMYYYY(dateStr) {
             if (!dateStr) return null;
             const parts = dateStr.split('/');
@@ -1203,7 +1221,6 @@
             return new Date(parts[2], parts[1] - 1, parts[0]);
         }
 
-        // Update Past 3 Days Summary
         function updatePast3DaysSummary() {
             const tbody = document.getElementById('past3DaysBody');
             tbody.innerHTML = '';
@@ -1211,7 +1228,6 @@
             const daysData = {};
             const today = new Date();
             
-            // Initialize last 3 days
             for (let i = 2; i >= 0; i--) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
@@ -1228,7 +1244,6 @@
                 };
             }
             
-            // Populate data from orders
             allOrders.forEach(order => {
                 const orderDate = order.timestamp ? order.timestamp.split(',')[0] : '';
                 if (daysData[orderDate]) {
@@ -1238,14 +1253,12 @@
                     const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
                     day.totalKgs += kgs;
                     
-                    // Parse amount
                     let amount = order.totalAmount;
                     if (typeof amount === 'string') {
                         amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
                     }
                     day.totalAmount += amount;
                     
-                    // Only count Paid and Completed as verified paid (NOT Proof Submitted)
                     if (order.status === 'Paid' || order.status === 'Completed') {
                         day.paidOrders++;
                         day.paidKgs += kgs;
@@ -1256,7 +1269,6 @@
                 }
             });
             
-            // Display rows
             Object.keys(daysData).sort().forEach(dateStr => {
                 const day = daysData[dateStr];
                 const row = document.createElement('tr');
@@ -1274,7 +1286,6 @@
             });
         }
 
-        // Update MTD Summary
         function updateMTDSummary() {
             const tbody = document.getElementById('mtdSummaryBody');
             tbody.innerHTML = '';
@@ -1295,7 +1306,6 @@
                 unpaidOrders: 0
             };
             
-            // Sum all orders for current month
             allOrders.forEach(order => {
                 const orderDate = order.timestamp ? order.timestamp.split(',')[0] : '';
                 if (orderDate) {
@@ -1306,14 +1316,12 @@
                         const kgs = parseFloat(order.totalWeight || order.totalKg || 0);
                         mtdData.totalKgs += kgs;
                         
-                        // Parse amount
                         let amount = order.totalAmount;
                         if (typeof amount === 'string') {
                             amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
                         }
                         mtdData.totalAmount += amount;
                         
-                        // Only count Paid and Completed as verified paid (NOT Proof Submitted)
                         if (order.status === 'Paid' || order.status === 'Completed') {
                             mtdData.paidOrders++;
                             mtdData.paidKgs += kgs;
@@ -1325,7 +1333,6 @@
                 }
             });
             
-            // Display row
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><strong>${mtdData.period}</strong></td>
@@ -1362,7 +1369,6 @@
             displayOrders(filtered);
         }
 
-        // Edit Order
         // Update Order Status
         function updateOrderStatus(docId, orderId) {
             const newStatus = prompt(`Update status for ${orderId}:\n1. Paid\n2. Cancelled\n3. Dispute\n\nEnter number (1/2/3):`, '');
@@ -1380,7 +1386,6 @@
             db.collection('orders').doc(docId).update({ status: selectedStatus })
                 .then(() => {
                     showSuccess(`Order ${orderId} updated to ${selectedStatus}!`);
-                    loadOrders();
                 })
                 .catch(error => {
                     showError('Error updating order: ' + error.message);
@@ -1401,7 +1406,7 @@
             window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
         }
 
-        // View Payment Proof
+        // View Payment Proof (already used textContent — kept as-is)
         function viewProof(orderId, customerName, amount, proofImage) {
             document.getElementById('proofOrderId').textContent = orderId;
             document.getElementById('proofCustomer').textContent = customerName;
@@ -1409,12 +1414,12 @@
             document.getElementById('proofImage').src = proofImage;
             document.getElementById('proofModal').classList.add('active');
         }
+
         async function toggleOrdersStatus() {
             const checkbox = document.getElementById('ordersToggle');
             const newStatus = checkbox.checked;
             
             try {
-                // Update adminSettings in Firestore
                 await db.collection('adminSettings').doc('ordersEnabled').set({
                     enabled: newStatus,
                     updatedAt: new Date().toISOString()
@@ -1428,7 +1433,6 @@
             }
         }
 
-        // Update Orders Status UI
         function updateOrdersStatusUI(enabled) {
             document.getElementById('ordersToggle').checked = enabled;
             const toggleSwitch = document.getElementById('toggleSwitch');
@@ -1448,13 +1452,11 @@
             }
         }
 
-        // Load Orders Status on Dashboard Load
         function loadOrdersStatus() {
             db.collection('adminSettings').doc('ordersEnabled').get().then(doc => {
                 if (doc.exists) {
                     updateOrdersStatusUI(doc.data().enabled);
                 } else {
-                    // Default to enabled
                     updateOrdersStatusUI(true);
                     db.collection('adminSettings').doc('ordersEnabled').set({ enabled: true });
                 }
@@ -1471,7 +1473,6 @@
             try {
                 await db.collection('orders').doc(docId).delete();
                 showSuccess('Order deleted successfully!');
-                loadOrders();
             } catch (error) {
                 showError('Error deleting order: ' + error.message);
             }
