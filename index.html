@@ -508,7 +508,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="customerName">Full Name <span class="required">*</span></label>
-                        <input type="text" id="customerName" placeholder="Enter your full name" required>
+                        <input type="text" id="customerName" placeholder="Enter your full name" maxlength="100" required>
                     </div>
                     <div class="form-group">
                         <label for="customerPhone">Phone Number <span class="required">*</span></label>
@@ -518,13 +518,13 @@
 
                 <div class="form-group">
                     <label for="customerEmail">Email Address <span class="required">*</span></label>
-                    <input type="email" id="customerEmail" placeholder="your@email.com" required>
+                    <input type="email" id="customerEmail" placeholder="your@email.com" maxlength="150" required>
                 </div>
 
                 <!-- Delivery Address (Hidden by default) -->
                 <div class="form-group hidden" id="addressGroup">
                     <label for="deliveryAddress">Delivery Address <span class="required">*</span></label>
-                    <textarea id="deliveryAddress" placeholder="House no., Street, Area" rows="3"></textarea>
+                    <textarea id="deliveryAddress" placeholder="House no., Street, Area" rows="3" maxlength="300"></textarea>
                 </div>
 
                 <div class="form-group hidden" id="pincodeGroup">
@@ -656,13 +656,6 @@
                 console.log("📍 Project ID:", firebaseConfig.projectId);
                 console.log("🌍 Auth Domain:", firebaseConfig.authDomain);
                 
-                // Test connection
-                db.collection('orders').limit(1).get().then(() => {
-                    console.log("✅ Connected to Firestore!");
-                }).catch(error => {
-                    console.log("⚠️ Firestore connection test:", error.message);
-                });
-                
             } catch(error) {
                 console.error("❌ Firebase initialization error:", error.message);
                 console.error("Error details:", error);
@@ -689,6 +682,21 @@
         let selectedDeliveryType = null;
         let stockAvailable = 0;
 
+        // ============================================================
+        // SECURITY: escape any customer-supplied text before it is
+        // ever inserted into innerHTML. Never interpolate raw fields
+        // (customerName, email, phone, etc.) into HTML strings.
+        // ============================================================
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         // Initialize app
         console.log("🚀 Initializing app...");
         
@@ -697,8 +705,11 @@
                 console.log("📦 Rendering products...");
                 renderProducts();
                 
-                console.log("📊 Setting up Firebase stock listener...");
+                console.log("📊 Loading stock from server API...");
                 loadStockData();
+                // Keep the stock counter reasonably fresh without ever
+                // touching Firestore directly from the browser.
+                setInterval(loadStockData, 20000);
                 
                 console.log("📸 Setting up file preview...");
                 setupProofFilePreview();
@@ -783,7 +794,6 @@
             field.style.borderColor = '#dc3545';
             field.style.backgroundColor = '#fff5f5';
             
-            // Create or update error message
             let errorDiv = field.nextElementSibling;
             if (!errorDiv || !errorDiv.classList.contains('field-error')) {
                 errorDiv = document.createElement('div');
@@ -798,7 +808,6 @@
             field.style.borderColor = '#28a745';
             field.style.backgroundColor = '#f0fdf4';
             
-            // Create or update success message
             let successDiv = field.nextElementSibling;
             if (!successDiv || !successDiv.classList.contains('field-error')) {
                 successDiv = document.createElement('div');
@@ -823,22 +832,18 @@
         function checkOrdersStatus() {
             db.collection('adminSettings').doc('ordersEnabled').get().then(doc => {
                 if (doc.exists && !doc.data().enabled) {
-                    // Orders disabled
                     console.log("🔒 Orders are disabled by admin");
                     showOrdersDisabledMessage();
                 } else {
-                    // Orders enabled (default)
                     console.log("✅ Orders are enabled");
                     document.getElementById('orderForm').style.display = 'block';
                 }
             }).catch(error => {
                 console.log("Orders status check error:", error);
-                // Default to enabled if error
                 document.getElementById('orderForm').style.display = 'block';
             });
         }
 
-        // Show orders disabled message
         function showOrdersDisabledMessage() {
             document.getElementById('orderForm').innerHTML = `
                 <div style="text-align: center; padding: 60px 20px; background: #f8d7da; border-radius: 8px; border: 2px solid #dc3545;">
@@ -866,7 +871,6 @@
                     showOrdersDisabledMessage();
                 } else {
                     if (document.getElementById('orderForm').innerHTML.includes('Orders Temporarily Closed')) {
-                        // Reload if was disabled before
                         location.reload();
                     }
                 }
@@ -877,17 +881,11 @@
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initializeApp);
         } else {
-            // DOM already loaded
             setTimeout(initializeApp, 500);
         }
 
-        // Also initialize on window load for safety
         window.addEventListener('load', () => {
             console.log("📄 Window loaded, ensuring app is initialized...");
-            if (!firebaseReady) {
-                console.log("⏳ Firebase still initializing...");
-            }
-            // Start listening to orders status changes
             listenToOrdersStatus();
         });
 
@@ -899,22 +897,18 @@
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 
-                // Create product icon
                 const icon = document.createElement('div');
                 icon.className = 'product-icon';
                 icon.textContent = '🪙';
                 
-                // Create weight display
                 const weight = document.createElement('div');
                 weight.className = 'product-weight';
                 weight.textContent = product.display;
                 
-                // Create price
                 const price = document.createElement('div');
                 price.className = 'product-price';
                 price.textContent = '₹' + product.price.toLocaleString();
                 
-                // Create quantity controls
                 const qtyDiv = document.createElement('div');
                 qtyDiv.className = 'quantity-control';
                 
@@ -948,12 +942,10 @@
                 qtyDiv.appendChild(input);
                 qtyDiv.appendChild(plusBtn);
                 
-                // Create subtotal
                 const subtotal = document.createElement('div');
                 subtotal.className = 'subtotal';
                 subtotal.innerHTML = 'Subtotal: <span class="subtotal-value" id="subtotal-' + product.id + '">₹0</span>';
                 
-                // Append all elements
                 card.appendChild(icon);
                 card.appendChild(weight);
                 card.appendChild(price);
@@ -1027,7 +1019,6 @@
                             deliveryAmount.textContent = `₹${deliveryCharge.toLocaleString()}`;
                         }
                     } else {
-                        // Invalid PIN or out of range
                         deliveryCharge = 0;
                         const deliveryRow = document.getElementById('deliveryChargeRow');
                         if (deliveryRow) {
@@ -1050,111 +1041,40 @@
         }
 
         // Serviceable PIN codes with delivery charges (Chennai area - 0-25 km MAX)
-        // PIN Code to Distance Mapping - FROM ALANDUR EXCEL FILE
-        // Business Location: Alandur (600016)
-        // FILTERED: 70 PIN codes within 25 km max (GOLD + CAKES unified)
         const PINCODE_DISTANCE_MAP = {
-            '600016': 1,    // Alandur / St. Thomas Mount
-            '600088': 2,    // Adambakkam
-            '600032': 2.3,  // Guindy / Ekkattuthangal
-            '600089': 4.2,  // Ramapuram
-            '600015': 4.5,  // Saidapet / Raj Bhavan
-            '600061': 4.8,  // Pazhavanthangal / Nanganallur
-            '600083': 5.6,  // Ashok Nagar
-            '600042': 6.5,  // Velachery
-            '600035': 6.7,  // Nandanam
-            '600078': 6.7,  // K.K. Nagar
-            '600091': 7,    // Madipakkam / Puzhuthivakkam
-            '600026': 7,    // Vadapalani
-            '600017': 7.6,  // T. Nagar / Thyagarayanagar
-            '600085': 7.7,  // Kotturpuram
-            '600043': 8,    // Pallavaram
-            '600018': 8,    // Teynampet / Abiramapuram
-            '600024': 8.1,  // Kodambakkam
-            '600020': 8.5,  // Adyar
-            '600087': 9,    // Valasaravakkam / Alwar Thirunagar
-            '600116': 9.1,  // Porur / Alapakkam
-            '600094': 9.2,  // Choolaimedu
-            '600106': 9.2,  // Arumbakkam
-            '600113': 9.4,  // Taramani / IIT Madras
-            '600006': 9.4,  // Greames Road / Thousand Lights
-            '600092': 9.6,  // Virugambakkam
-            '600044': 10,   // Chromepet
-            '600034': 10.2, // Nungambakkam
-            '600028': 10.3, // Raja Annamalaipuram
-            '600090': 10.5, // Besant Nagar
-            '600075': 10.8, // Pammal
-            '600029': 10.9, // Aminjikarai
-            '600070': 11,   // Anakaputhur West / Pozhichalur
-            '600004': 11.4, // Mylapore
-            '600095': 11.5, // Vanagaram/Ayanambakkam
-            '600096': 11.8, // Perungudi
-            '600107': 12.1, // Koyambedu
-            '600100': 12.3, // Medavakkam
-            '600041': 12.7, // Thiruvanmiyur
-            '600097': 13.1, // Karapakkam / OMR
-            '600030': 13.2, // Shenoy Nagar
-            '600064': 13.3, // Chromepet East / Chitlapakkam
-            '600122': 13.4, // Mangadu
-            '600008': 13.5, // Egmore
-            '600010': 13.7, // Kilpauk
-            '600040': 14,   // Anna Nagar
-            '600002': 14.1, // Anna Salai / Chintadripet / Mount Road
-            '600050': 14.4, // Padi
-            '600045': 14.5, // Tambaram
-            '600007': 14.7, // Vepery / Choolai
-            '600056': 15,   // Poonamallee / Iyyappanthangal
-            '600014': 15.1, // Royapettah
-            '600005': 15.7, // Triplicane
-            '600049': 15.7, // Villivakkam
-            '600069': 16.4, // Nandambakkam / Kundrathur
-            '600023': 17.4, // Ayanavaram
-            '600012': 17.4, // Perambur Barracks / Otteri
-            '600073': 17.5, // Selaiyur / East Tambaram
-            '600077': 17.7, // Thiruverkadu
-            '600009': 17.9, // Fort St. George
-            '600003': 18.3, // Park Town / Central Railway Stn
-            '600099': 18.5, // Puthagaram / Lakshmipuram
-            '600063': 18.5, // Perungalathur
-            '600053': 18.7, // Ambattur
-            '600082': 18.8, // Agaram / Jawahar Nagar
-            '600126': 19.5, // Madambakkam
-            '600001': 19.7, // Parrys / Chennai GPO
-            '600130': 20,   // Navalur / OMR
-            '600119': 20.7, // Sholinganallur
-            '600013': 21.7, // Royapuram
-            '600011': 22,   // Perambur
-            '600118': 22,   // Kavangarai / Kodungaiyur
-            '600021': 22.8, // Washermanpet
-            '600048': 22.8, // Vandalur
-            '600039': 24.3, // Vyasarpadi
-            '600081': 24.8, // Tondiarpet
-            '600060': 25,   // Madhavaram (MAX DISTANCE)
-            '600054': 25    // Avadi (MAX DISTANCE)
+            '600016': 1,    '600088': 2,    '600032': 2.3,  '600089': 4.2,
+            '600015': 4.5,  '600061': 4.8,  '600083': 5.6,  '600042': 6.5,
+            '600035': 6.7,  '600078': 6.7,  '600091': 7,    '600026': 7,
+            '600017': 7.6,  '600085': 7.7,  '600043': 8,    '600018': 8,
+            '600024': 8.1,  '600020': 8.5,  '600087': 9,    '600116': 9.1,
+            '600094': 9.2,  '600106': 9.2,  '600113': 9.4,  '600006': 9.4,
+            '600092': 9.6,  '600044': 10,   '600034': 10.2, '600028': 10.3,
+            '600090': 10.5, '600075': 10.8, '600029': 10.9, '600070': 11,
+            '600004': 11.4, '600095': 11.5, '600096': 11.8, '600107': 12.1,
+            '600100': 12.3, '600041': 12.7, '600097': 13.1, '600030': 13.2,
+            '600064': 13.3, '600122': 13.4, '600008': 13.5, '600010': 13.7,
+            '600040': 14,   '600002': 14.1, '600050': 14.4, '600045': 14.5,
+            '600007': 14.7, '600056': 15,   '600014': 15.1, '600005': 15.7,
+            '600049': 15.7, '600069': 16.4, '600023': 17.4, '600012': 17.4,
+            '600073': 17.5, '600077': 17.7, '600009': 17.9, '600003': 18.3,
+            '600099': 18.5, '600063': 18.5, '600053': 18.7, '600082': 18.8,
+            '600126': 19.5, '600001': 19.7, '600130': 20,   '600119': 20.7,
+            '600013': 21.7, '600011': 22,   '600118': 22,   '600021': 22.8,
+            '600048': 22.8, '600039': 24.3, '600081': 24.8, '600060': 25,
+            '600054': 25
         };
 
-        // Email validation
         function validateEmail(email) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             return emailRegex.test(email);
         }
 
-        // Indian mobile number validation (10 digits starting with 6-9)
         function validatePhoneNumber(phone) {
             const phoneRegex = /^[6-9]\d{9}$/;
             return phoneRegex.test(phone);
         }
 
-        // Distance-based delivery charge calculator (UNIFIED for Gold + Cakes)
         function calculateDeliveryCharge(distance) {
-            // UPDATED Formula:
-            // Distance 0 km         → ₹50 (flat rate)
-            // Distance 1 km         → ₹65
-            // Distance 2 km         → ₹75
-            // Distance >2 to ≤15 km → ₹50 + (₹10 × distance)
-            // Distance >15 to ≤25 km → ₹75 + (₹12 × distance)
-            
-            // Ensure distance is a number
             const dist = parseFloat(distance);
             
             if (isNaN(dist) || dist < 0) {
@@ -1172,23 +1092,19 @@
             } else if (dist <= 25) {
                 return Math.round(75 + (12 * dist));
             } else {
-                return null; // Beyond 25 km: Not serviceable
+                return null;
             }
         }
 
-        // PIN code validation and delivery charge calculation (0-25 km MAX)
         function validatePincode(pincode) {
-            // Check if PIN is 6 digits
             const pincodeRegex = /^\d{6}$/;
             if (!pincodeRegex.test(pincode)) {
                 return { valid: false, message: '❌ PIN code must be 6 digits', charge: 0, distance: 0 };
             }
             
-            // Check if serviceable
             if (PINCODE_DISTANCE_MAP[pincode] !== undefined) {
                 const distance = PINCODE_DISTANCE_MAP[pincode];
                 
-                // Check if within 25 km max
                 if (distance > 25) {
                     return { 
                         valid: false, 
@@ -1245,125 +1161,74 @@
             updateFinalAmount();
         }
 
-        // Maximum stock allowed per day (you can change this)
-        const MAX_STOCK_AVAILABLE = 9000; // 9kg in grams
-
-        function loadStockData() {
-            console.log("📊 Attempting to load stock from Firestore...");
-            
-            // Check if Firebase is ready
-            if (!firebaseReady || !window.db) {
-                console.log("⏳ Firebase not ready yet, will retry...");
-                setTimeout(loadStockData, 1000);
-                return;
-            }
-
+        // ============================================================
+        // SECURITY: stock is now computed server-side (see /api/stock)
+        // using the Firebase Admin SDK. The browser never reads the
+        // orders collection directly for this — it only gets back a
+        // single aggregated number, so customer PII and payment proof
+        // images are never exposed just to show "how much stock is left".
+        // ============================================================
+        async function loadStockData() {
             try {
-                console.log("🔄 Reading orders to calculate available stock...");
-                
-                // Real-time listener for stock calculation
-                db.collection('orders').onSnapshot(snapshot => {
-                    const today = new Date().toLocaleDateString('en-IN');
-                    let totalGramsOrdered = 0;
-                    let ordersCount = 0;
+                const response = await fetch('/api/stock', { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error('Stock API returned ' + response.status);
+                }
+                const data = await response.json();
+                stockAvailable = data.available;
 
-                    snapshot.forEach(doc => {
-                        const order = doc.data();
-                        
-                        // Extract date from timestamp or createdAt
-                        const orderDateStr = order.timestamp || order.createdAt;
-                        let orderDate = '';
-                        
-                        if (orderDateStr) {
-                            // Handle both formats: "dd/mm/yyyy, ..." or ISO format
-                            if (orderDateStr.includes(',')) {
-                                orderDate = orderDateStr.split(',')[0].trim();
-                            } else if (orderDateStr.includes('T')) {
-                                // ISO format - convert to dd/mm/yyyy
-                                const d = new Date(orderDateStr);
-                                orderDate = d.toLocaleDateString('en-IN');
-                            }
-                        }
-                        
-                        console.log("📋 Order found:", order.orderId, "Date:", orderDate, "Status:", order.status, "Weight:", order.totalWeight, "kg");
-                        
-                        // Count PAID orders only (status: Pending, Completed, or Paid) - NOT Proof Submitted
-                        const paidStatuses = ['Pending', 'Completed', 'Paid'];
-                        if (orderDate === today && paidStatuses.includes(order.status)) {
-                            const weightKg = parseFloat(order.totalWeight || order.totalKg || 0);
-                            totalGramsOrdered += weightKg * 1000; // Convert kg to grams
-                            ordersCount++;
-                            console.log("✅ PAID Order counted:", order.orderId, "weight:", weightKg, "kg");
-                        } else if (orderDate === today) {
-                            console.log("⏳ Unpaid order NOT counted:", order.orderId, "status:", order.status);
-                        }
-                    });
+                const stockKg = (stockAvailable / 1000).toFixed(2);
+                document.getElementById('stockDisplay').textContent = `📦 Available Today: ${stockKg}kg (${stockAvailable}g)`;
 
-                    // Calculate available stock
-                    stockAvailable = MAX_STOCK_AVAILABLE - totalGramsOrdered;
-                    if (stockAvailable < 0) stockAvailable = 0;
-
-                    console.log("📊 Total grams ordered today:", totalGramsOrdered);
-                    console.log("📊 Max available:", MAX_STOCK_AVAILABLE, "g");
-                    console.log("📊 Stock remaining:", stockAvailable, "g");
-                    console.log("📊 Orders counted:", ordersCount);
-
-                    // Update display
-                    const stockKg = (stockAvailable / 1000).toFixed(2);
-                    document.getElementById('stockDisplay').textContent = `📦 Available Today: ${stockKg}kg (${stockAvailable}g)`;
-
-                    // Close orders if stock exhausted
-                    if (stockAvailable <= 0) {
-                        document.getElementById('orderForm').style.opacity = '0.5';
-                        document.getElementById('orderForm').style.pointerEvents = 'none';
-                        showError('Daily stock limit reached! Orders are closed for today.');
-                    }
-                }, (error) => {
-                    console.error("❌ Firestore stock calculation error:", error.message);
-                    document.getElementById('stockDisplay').textContent = `📦 Available Today: Error`;
-                });
-            } catch(error) {
+                const orderForm = document.getElementById('orderForm');
+                if (stockAvailable <= 0) {
+                    orderForm.style.opacity = '0.5';
+                    orderForm.style.pointerEvents = 'none';
+                    showError('Daily stock limit reached! Orders are closed for today.');
+                } else {
+                    orderForm.style.opacity = '1';
+                    orderForm.style.pointerEvents = 'auto';
+                }
+            } catch (error) {
                 console.error("❌ Stock load exception:", error.message);
-                document.getElementById('stockDisplay').textContent = `📦 Available Today: Error`;
+                document.getElementById('stockDisplay').textContent = `📦 Available Today: Error loading stock`;
             }
         }
 
-        function submitOrder(event) {
+        async function submitOrder(event) {
             event.preventDefault();
 
-            // Validate form
             const totalItems = Object.values(cart).reduce((a, b) => a + b, 0);
             if (totalItems === 0) {
                 showError('Please select at least one gold biscuit');
                 return;
             }
 
-            // Check stock
             const totalWeight = Object.entries(cart).reduce((sum, [id, qty]) => {
                 const product = products.find(p => p.id == id);
                 return sum + (qty * product.weight);
             }, 0);
 
+            // Re-check stock fresh from the server right before submitting,
+            // rather than trusting a value cached from the last poll.
+            await loadStockData();
             if (totalWeight > stockAvailable) {
                 showError(`Insufficient stock! Available: ${stockAvailable}g, Requested: ${totalWeight}g`);
                 return;
             }
 
-            // Validate email format
             const email = document.getElementById('customerEmail').value;
             if (!validateEmail(email)) {
                 showError('❌ Please enter valid email address (e.g., name@example.com)');
                 return;
             }
 
-            // Validate phone number (Indian mobile)
             const phone = document.getElementById('customerPhone').value;
             if (!validatePhoneNumber(phone)) {
                 showError('❌ Please enter valid Indian mobile number (10 digits starting with 6-9)');
                 return;
             }
 
-            // Validate delivery fields if needed
             if (selectedDeliveryType === 'delivery') {
                 const address = document.getElementById('deliveryAddress').value;
                 const pincode = document.getElementById('pincode').value;
@@ -1378,7 +1243,6 @@
                     return;
                 }
 
-                // Validate PIN code and check if serviceable
                 const validation = validatePincode(pincode);
                 if (!validation.valid) {
                     showError('❌ ' + validation.message);
@@ -1386,13 +1250,14 @@
                 }
             }
 
-            // Create order data
-            const orderId = 'ORD' + Date.now();
+            // Order ID doubles as the Firestore document ID (see SECURITY note
+            // below), so it needs to be unique — timestamp plus a random
+            // suffix keeps collisions effectively impossible.
+            const orderId = 'ORD' + Date.now() + Math.floor(Math.random() * 1000);
             const now = new Date();
             const timestamp = now.toLocaleDateString('en-IN') + ', ' + now.toLocaleTimeString('en-IN');
-            const totalWeightKg = totalWeight / 1000; // Convert grams to kg
+            const totalWeightKg = totalWeight / 1000;
             
-            // Parse amount - remove ₹ and commas
             const amountString = document.getElementById('finalAmount').textContent;
             const amountNumber = parseInt(amountString.replace('₹', '').replace(/,/g, '')) || 0;
             
@@ -1401,53 +1266,54 @@
                 customerName: document.getElementById('customerName').value,
                 customerEmail: document.getElementById('customerEmail').value,
                 customerPhone: document.getElementById('customerPhone').value,
-                totalWeight: totalWeightKg, // In kg
-                totalKg: totalWeightKg, // Also store as totalKg for compatibility
+                totalWeight: totalWeightKg,
+                totalKg: totalWeightKg,
                 totalItems: totalItems,
-                totalAmount: amountNumber, // Store as number, not string
-                totalAmountFormatted: amountString, // Store formatted version too
+                totalAmount: amountNumber,
+                totalAmountFormatted: amountString,
                 deliveryType: selectedDeliveryType,
                 address: document.getElementById('deliveryAddress').value,
                 pincode: document.getElementById('pincode').value,
                 status: 'Pending Payment',
                 createdAt: now.toISOString(),
-                timestamp: timestamp, // Format: "dd/mm/yyyy, hh:mm:ss"
-                // CRITICAL: Store product breakdown for accurate analytics
+                timestamp: timestamp,
                 cartBreakdown: {
-                    '250g': cart[1] || 0,  // Product ID 1 = 250g
-                    '500g': cart[2] || 0,  // Product ID 2 = 500g
-                    '1kg': cart[3] || 0    // Product ID 3 = 1kg
+                    '250g': cart[1] || 0,
+                    '500g': cart[2] || 0,
+                    '1kg': cart[3] || 0
                 }
             };
 
             console.log("💾 Attempting to save order to Firestore...");
             console.log("Order data:", orderData);
 
-            // Save to Firestore (REQUIRED)
             if (!window.db) {
                 showError("Firestore not connected. Please try again.");
                 return;
             }
 
-            // Add to Firestore (orders collection) and wait for completion
-            db.collection('orders').add(orderData)
-                .then((docRef) => {
+            // ============================================================
+            // SECURITY: the document ID IS the orderId now (instead of an
+            // auto-generated random ID). This lets the Firestore rules
+            // allow a public "get" of one known order (needed for Search
+            // Order) while blocking "list" of the whole collection to
+            // everyone except an authenticated admin — see firestore.rules.
+            // ============================================================
+            db.collection('orders').doc(orderId).set(orderData)
+                .then(() => {
                     console.log("✅ Order successfully saved to Firestore!");
                     console.log("Order ID:", orderId);
-                    console.log("Document ID:", docRef.id);
                     
-                    // Store order IDs globally
                     window.currentOrderId = orderId;
-                    window.currentOrderDocId = docRef.id;
+                    window.currentOrderDocId = orderId;
                     
-                    // Now show payment section with the correct order ID AND amount
                     showPaymentSectionWithOrder(orderId, amountNumber, amountString);
+                    loadStockData();
                 })
                 .catch((error) => {
                     console.error("❌ Firestore save error!");
                     console.error("Error code:", error.code);
                     console.error("Error message:", error.message);
-                    console.error("Full error:", error);
                     showError("❌ Error saving order: " + error.message);
                 });
         }
@@ -1455,53 +1321,42 @@
         function showPaymentSectionWithOrder(orderId, amountNumber, amountString) {
             console.log("🎯 Showing payment section for Order:", orderId, "Amount:", amountString);
             
-            // SIMPLE FIX: Clear payment messages first
             const errorDiv = document.getElementById('paymentErrorMessage');
             const successDiv = document.getElementById('paymentSuccessMessage');
             if (errorDiv) errorDiv.style.display = 'none';
             if (successDiv) successDiv.style.display = 'none';
             
-            // Reset and hide order form completely
             document.getElementById('orderForm').reset();
             document.getElementById('orderForm').style.display = 'none';
             
-            // Clear cart
             cart = {};
             renderProducts();
             updateCart();
             
-            // Clear search section
             document.getElementById('searchOrderId').value = '';
             document.getElementById('searchResults').innerHTML = '';
             
-            // Show payment section with animation
             const paymentSection = document.getElementById('paymentSection');
             paymentSection.style.display = 'block';
             paymentSection.classList.add('active');
             
-            // Use the passed amount instead of trying to get from DOM
             document.getElementById('payOrderId').textContent = orderId;
             document.getElementById('payAmount').textContent = amountString;
             
-            // Clear proof file input
             document.getElementById('proofFile').value = '';
             
-            // SIMPLE FIX: Reset upload button text and state
             const uploadBtn = document.querySelector('button[onclick="uploadPaymentProof()"]');
             if (uploadBtn) {
                 uploadBtn.textContent = '✅ Upload & Submit Proof';
                 uploadBtn.disabled = false;
             }
             
-            // SIMPLE FIX: Clear old QR image and preview before generating new one
             document.getElementById('qrCode').src = '';
             const previewContainer = document.getElementById('previewContainer');
             if (previewContainer) previewContainer.style.display = 'none';
             
-            // Generate QR Code with amount as number
             generatePaymentQRCode(orderId, amountNumber);
             
-            // CRITICAL: Scroll to the payment section and ensure it's visible
             setTimeout(() => {
                 paymentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 console.log("✅ Scrolled to payment section");
@@ -1540,7 +1395,6 @@
             console.log("📸 UPLOADING PAYMENT PROOF...");
             const proofFile = document.getElementById('proofFile').files[0];
             
-            // CRITICAL: Check if file is selected first
             if (!proofFile) {
                 console.log("❌ NO FILE SELECTED");
                 showPaymentError('❌ Please upload payment proof first');
@@ -1549,13 +1403,11 @@
 
             console.log("📁 FILE SELECTED:", proofFile.name);
             
-            // Show loading state
             const uploadBtn = event.target;
             const originalText = uploadBtn.textContent;
             uploadBtn.textContent = '⏳ Uploading...';
             uploadBtn.disabled = true;
 
-            // Read file as base64
             const reader = new FileReader();
             reader.onload = function(e) {
                 console.log("📥 FILE READ AS BASE64");
@@ -1563,7 +1415,6 @@
                 const orderId = document.getElementById('payOrderId').textContent;
                 console.log("📝 ORDER ID:", orderId, "DOC ID:", window.currentOrderDocId);
 
-                // Update order in Firestore with proof
                 if (window.currentOrderDocId) {
                     console.log("💾 SAVING PROOF TO FIRESTORE...");
                     db.collection('orders').doc(window.currentOrderDocId).update({
@@ -1575,7 +1426,6 @@
                         console.log("✅ PROOF SAVED! SHOWING SUCCESS MESSAGE...");
                         showPaymentSuccess('✅ Thanks for uploading the payment proof! The same has been uploaded and stored successfully. Admin will verify the same and will let you know further actions.');
                         
-                        // Reset after 3 seconds
                         setTimeout(() => {
                             goBackFromPayment();
                         }, 3000);
@@ -1607,34 +1457,28 @@
         function goBackFromPayment() {
             console.log("🔙 Going back from payment - Clearing everything");
             
-            // Hide payment section
             const paymentSection = document.getElementById('paymentSection');
             paymentSection.style.display = 'none';
             paymentSection.classList.remove('active');
             
-            // Show order form
             document.getElementById('orderForm').style.display = 'block';
             document.getElementById('orderForm').reset();
             
-            // Reset cart
             cart = {};
             renderProducts();
             updateCart();
             
-            // Reset delivery type to pickup
             selectedDeliveryType = 'pickup';
             const pickupRadio = document.querySelector('input[name="deliveryType"][value="pickup"]');
             const deliveryRadio = document.querySelector('input[name="deliveryType"][value="delivery"]');
             if (pickupRadio) pickupRadio.checked = true;
             if (deliveryRadio) deliveryRadio.checked = false;
             
-            // Hide delivery details
             const addressGroup = document.getElementById('addressGroup');
             const pincodeGroup = document.getElementById('pincodeGroup');
             if (addressGroup) addressGroup.classList.add('hidden');
             if (pincodeGroup) pincodeGroup.classList.add('hidden');
             
-            // Clear delivery charge display - CRITICAL FIX
             const deliveryRow = document.getElementById('deliveryChargeRow');
             if (deliveryRow) {
                 deliveryRow.style.display = 'none';
@@ -1644,7 +1488,6 @@
                 deliveryAmount.textContent = '₹0';
             }
             
-            // Clear PIN validation messages - CRITICAL FIX
             const pincodeError = document.getElementById('pincodeError');
             if (pincodeError) {
                 pincodeError.textContent = '';
@@ -1654,31 +1497,26 @@
                 deliveryChargeDisplay.textContent = '';
             }
             
-            // Clear all form inputs
             document.getElementById('customerName').value = '';
             document.getElementById('customerEmail').value = '';
             document.getElementById('customerPhone').value = '';
             document.getElementById('deliveryAddress').value = '';
             document.getElementById('pincode').value = '';
             
-            // Reset final amount
             const finalAmountEl = document.getElementById('finalAmount');
             if (finalAmountEl) {
                 finalAmountEl.textContent = '₹0';
             }
             
-            // Clear search section
             document.getElementById('searchOrderId').value = '';
             document.getElementById('searchResults').innerHTML = '';
             
-            // CRITICAL FIX: Reset upload button text and state
             const uploadBtn = document.querySelector('button[onclick="uploadPaymentProof()"]');
             if (uploadBtn) {
                 uploadBtn.textContent = '✅ Upload & Submit Proof';
                 uploadBtn.disabled = false;
             }
             
-            // Scroll to top
             document.getElementById('orderForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
             
             console.log("✅ Cleared all form fields and reset to initial state");
@@ -1693,74 +1531,61 @@
             document.getElementById(tab).classList.add('active');
             event.target.classList.add('active');
             
-            // AUTO-CLEAR search results when switching to search tab
             if (tab === 'search-tab') {
                 console.log("📋 Clearing search results automatically");
                 document.getElementById('searchOrderId').value = '';
                 document.getElementById('searchResults').innerHTML = '';
             }
             
-            // AUTO-CLEAR when switching to order tab (from search tab)
             if (tab === 'order-tab') {
                 console.log("📝 Switched to Place Order tab");
-                // Form stays as is, user can continue ordering
             }
         }
         
         function clearAndRestart() {
             console.log("🔄 CLEAR & RESTART - Resetting everything");
             
-            // Hide payment section
             const paymentSection = document.getElementById('paymentSection');
             paymentSection.style.display = 'none';
             paymentSection.classList.remove('active');
             
-            // Clear cart
             cart = {};
             renderProducts();
             updateCart();
             
-            // Reset delivery type
             selectedDeliveryType = 'self-pickup';
             const pickupRadio = document.querySelector('input[name="deliveryType"][value="pickup"]');
             const deliveryRadio = document.querySelector('input[name="deliveryType"][value="delivery"]');
             if (pickupRadio) pickupRadio.checked = true;
             if (deliveryRadio) deliveryRadio.checked = false;
             
-            // Hide delivery details
             const addressGroup = document.getElementById('addressGroup');
             const pincodeGroup = document.getElementById('pincodeGroup');
             if (addressGroup) addressGroup.classList.add('hidden');
             if (pincodeGroup) pincodeGroup.classList.add('hidden');
             
-            // Clear delivery charge display
             const deliveryRow = document.getElementById('deliveryChargeRow');
             if (deliveryRow) deliveryRow.style.display = 'none';
             const deliveryAmount = document.getElementById('deliveryChargeAmount');
             if (deliveryAmount) deliveryAmount.textContent = '₹0';
             
-            // Clear PIN validation message
             const pincodeError = document.getElementById('pincodeError');
             if (pincodeError) pincodeError.textContent = '';
             const deliveryChargeDisplay = document.getElementById('deliveryChargeDisplay');
             if (deliveryChargeDisplay) deliveryChargeDisplay.textContent = '';
             
-            // Clear all form inputs
             document.getElementById('customerName').value = '';
             document.getElementById('customerEmail').value = '';
             document.getElementById('customerPhone').value = '';
             document.getElementById('deliveryAddress').value = '';
             document.getElementById('pincode').value = '';
             
-            // Reset final amount
             const finalAmountEl = document.getElementById('finalAmount');
             if (finalAmountEl) finalAmountEl.textContent = '₹0';
             
-            // Clear search section
             document.getElementById('searchOrderId').value = '';
             document.getElementById('searchResults').innerHTML = '';
             
-            // Switch to Place Order tab
             const orderTab = document.getElementById('order-tab');
             const searchTab = document.getElementById('search-tab');
             const orderBtn = document.querySelector('button[onclick="switchTab(\'order-tab\')"]');
@@ -1773,7 +1598,6 @@
                 searchBtn.classList.remove('active');
             }
             
-            // Scroll to products
             const productsGrid = document.getElementById('productsGrid');
             if (productsGrid) {
                 productsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1782,8 +1606,15 @@
             console.log("✅ Cleared and restarted - Ready for new order");
         }
 
+        // ============================================================
+        // SECURITY: this now does a single-document get() by orderId
+        // (the document ID) instead of a where()-query across the whole
+        // collection. A single get() is allowed for anyone under the
+        // new Firestore rules; a list/query across all orders is not —
+        // so a stranger can no longer enumerate or scrape every order.
+        // ============================================================
         function searchOrder() {
-            const orderId = document.getElementById('searchOrderId').value;
+            const orderId = document.getElementById('searchOrderId').value.trim();
             if (!orderId) {
                 showError('Please enter Order ID');
                 return;
@@ -1794,14 +1625,9 @@
                 return;
             }
 
-            // Fetch order from Firestore (orders collection)
-            db.collection('orders')
-                .where('orderId', '==', orderId)
-                .limit(1)
-                .get()
-                .then(snapshot => {
-                    if (!snapshot.empty) {
-                        const doc = snapshot.docs[0];
+            db.collection('orders').doc(orderId).get()
+                .then(doc => {
+                    if (doc.exists) {
                         const order = doc.data();
                         order.firebaseDocId = doc.id;
                         displayOrderDetails(order);
@@ -1818,7 +1644,6 @@
         function displayOrderDetails(order) {
             const resultsDiv = document.getElementById('searchResults');
             
-            // Parse amount
             let amount = order.totalAmount;
             if (typeof amount === 'string') {
                 amount = parseInt(amount.replace('₹', '').replace(/,/g, '')) || 0;
@@ -1847,15 +1672,18 @@
                 statusEmoji = '⚠️';
             }
             
-            // Show payment & proof upload ONLY if status is 'Pending Payment'
             const showPaymentSection = (order.status === 'Pending Payment');
             
             let paymentHTML = '';
             let proofUploadHTML = '';
             let qrCodeUrl = '';
             
+            // orderId here is always our own system-generated value
+            // (never typed in by a stranger into a field that gets
+            // reflected back), so it's safe to use in ids/attributes.
+            const safeOrderId = escapeHtml(order.orderId);
+            
             if (showPaymentSection) {
-                // Generate QR code URL with correct UPI ID
                 const upiString = `upi://pay?pa=9884908910@hdfc&pn=Gold Shop&am=${amount}&tn=Order ${order.orderId}`;
                 const encodedUPI = encodeURIComponent(upiString);
                 qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedUPI}`;
@@ -1873,44 +1701,44 @@
                     </div>
                 `;
                 
-                // Add proof upload section for pending payment orders
                 proofUploadHTML = `
                     <div style="background: #f0f4f8; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #2196F3;">
                         <h4 style="color: #2196F3; margin: 0 0 10px 0;">📸 Upload Payment Proof</h4>
                         <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">After paying via UPI, upload your payment screenshot:</p>
-                        <input type="file" id="searchProofFile_${order.orderId}" accept="image/*" style="display: block; margin-bottom: 10px; padding: 8px; border: 2px solid #2196F3; border-radius: 4px; width: 100%;">
-                        <img id="searchProofPreview_${order.orderId}" style="display: none; max-width: 200px; max-height: 200px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <button onclick="uploadSearchProof('${order.firebaseDocId}', '${order.orderId}')" style="background: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600; width: 100%;">✅ Upload & Submit Proof</button>
+                        <input type="file" id="searchProofFile_${safeOrderId}" accept="image/*" style="display: block; margin-bottom: 10px; padding: 8px; border: 2px solid #2196F3; border-radius: 4px; width: 100%;">
+                        <img id="searchProofPreview_${safeOrderId}" style="display: none; max-width: 200px; max-height: 200px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button onclick="uploadSearchProof('${safeOrderId}', '${safeOrderId}')" style="background: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600; width: 100%;">✅ Upload & Submit Proof</button>
                     </div>
                 `;
             }
             
+            // All customer-supplied fields are escaped below. Never
+            // interpolate order.customerName/email/phone/etc. raw.
             resultsDiv.innerHTML = `
                 <div style="background: ${statusColor}20; padding: 20px; border-radius: 8px; border-left: 4px solid ${statusColor};">
                     <h3 style="color: ${statusColor}; margin: 0 0 15px 0;">${statusEmoji} Order Found!</h3>
-                    <p style="margin: 5px 0;"><strong>Order ID:</strong> ${order.orderId}</p>
-                    <p style="margin: 5px 0;"><strong>Customer:</strong> ${order.customerName}</p>
-                    <p style="margin: 5px 0;"><strong>Email:</strong> ${order.customerEmail}</p>
-                    <p style="margin: 5px 0;"><strong>Phone:</strong> ${order.customerPhone}</p>
+                    <p style="margin: 5px 0;"><strong>Order ID:</strong> ${safeOrderId}</p>
+                    <p style="margin: 5px 0;"><strong>Customer:</strong> ${escapeHtml(order.customerName)}</p>
+                    <p style="margin: 5px 0;"><strong>Email:</strong> ${escapeHtml(order.customerEmail)}</p>
+                    <p style="margin: 5px 0;"><strong>Phone:</strong> ${escapeHtml(order.customerPhone)}</p>
                     <p style="margin: 5px 0;"><strong>Amount:</strong> ₹${amount.toLocaleString()}</p>
                     <p style="margin: 5px 0;"><strong>Total KG:</strong> ${order.totalWeight || order.totalKg}kg</p>
                     <p style="margin: 5px 0;"><strong>Delivery Type:</strong> ${order.deliveryType === 'delivery' ? '🚚 Delivery' : '🏪 Pickup'}</p>
-                    <p style="margin: 5px 0;"><strong>Status:</strong> <span style="display: inline-block; background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${order.status || 'Pending'}</span></p>
-                    <p style="margin: 5px 0;"><strong>Date:</strong> ${order.timestamp || order.createdAt}</p>
+                    <p style="margin: 5px 0;"><strong>Status:</strong> <span style="display: inline-block; background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${escapeHtml(order.status || 'Pending')}</span></p>
+                    <p style="margin: 5px 0;"><strong>Date:</strong> ${escapeHtml(order.timestamp || order.createdAt)}</p>
                     ${paymentHTML}
                     ${proofUploadHTML}
                 </div>
             `;
             
-            // Setup file preview for proof upload (only if showing payment section)
             if (showPaymentSection) {
-                document.getElementById(`searchProofFile_${order.orderId}`).addEventListener('change', function(e) {
+                document.getElementById(`searchProofFile_${safeOrderId}`).addEventListener('change', function(e) {
                     const file = e.target.files[0];
                     if (file) {
                         const reader = new FileReader();
                         reader.onload = function(e) {
-                            document.getElementById(`searchProofPreview_${order.orderId}`).src = e.target.result;
-                            document.getElementById(`searchProofPreview_${order.orderId}`).style.display = 'block';
+                            document.getElementById(`searchProofPreview_${safeOrderId}`).src = e.target.result;
+                            document.getElementById(`searchProofPreview_${safeOrderId}`).style.display = 'block';
                         };
                         reader.readAsDataURL(file);
                     }
@@ -1925,18 +1753,15 @@
                 return;
             }
 
-            // Show loading state
             const uploadBtn = event.target;
             const originalText = uploadBtn.textContent;
             uploadBtn.textContent = '⏳ Uploading...';
             uploadBtn.disabled = true;
 
-            // Read file as base64
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Proof = e.target.result;
 
-                // Update order in Firestore with proof
                 if (firebaseDocId && window.db) {
                     db.collection('orders').doc(firebaseDocId).update({
                         status: 'Proof Submitted',
@@ -1947,7 +1772,6 @@
                         console.log("✅ Proof uploaded successfully for order:", orderId);
                         showSuccess('✅ Thanks for uploading the payment proof! The same has been uploaded and stored successfully. Admin will verify the same and will let you know further actions.');
                         
-                        // Reset after 3 seconds
                         setTimeout(() => {
                             document.getElementById('searchOrderId').value = '';
                             document.getElementById('searchResults').innerHTML = '';
@@ -2006,7 +1830,6 @@
             successDiv.style.display = 'block';
             console.log("✅ Success div display set to block");
             
-            // SIMPLE FIX: Scroll message into view
             successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             console.log("✅ Scrolled to success message");
             
