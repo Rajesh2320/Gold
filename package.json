@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Gold Booking System - static site + Vercel serverless functions",
+  "scripts": {
+    "build": "echo 'Static site - no build step required'"
+  },
   "dependencies": {
     "firebase-admin": "^12.6.0"
   }
